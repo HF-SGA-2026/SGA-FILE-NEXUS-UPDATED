@@ -1,21 +1,25 @@
-# SGA FILE RENAME
+# SGA FILE NEXUS
 
-This is the website version of SGA FILE RENAME. It runs as a local browser website using plain HTML, CSS, and JavaScript.
+This is the website version of SGA FILE NEXUS. It runs as a local browser website using plain HTML, CSS, and JavaScript.
 
 ## Run the Website
 
-Open `index.html` in a modern desktop browser.
-
-For the best folder picker and ZIP download behavior, run a small local website server from this folder:
+From the main project folder, run:
 
 ```bash
-python3 -m http.server 8080
+npm start
 ```
 
 Then open:
 
 ```text
 http://localhost:8080
+```
+
+You can also run a simple Python server from this folder:
+
+```bash
+python3 -m http.server 8080
 ```
 
 ## Website Flow
@@ -81,4 +85,18 @@ Unsupported files are copied unchanged so the folder structure remains intact. H
 
 ## Large Folder Note
 
-The website builds the ZIP in the browser. Very large folders can hit browser memory or download limits. A server-side version is better for very large folders.
+When this site is run with `npm start`, ZIP creation is handled by the local Node server when possible. This is better for very large folders because the browser no longer has to build the ZIP by itself.
+
+If the selected export includes HEIC/HEIF files that need JPG conversion, the app safely falls back to browser ZIP creation because the local server does not include an image converter.
+
+For truly large folders, use the server folder path box:
+
+1. Start the app with `npm start`.
+2. Open `http://localhost:8080`.
+3. Paste the full path to the main folder.
+4. Click **Scan Server Folder**.
+5. Review the same settings and preview sections.
+6. Click **Export ZIP**.
+7. Click **Download ZIP**.
+
+This mode scans and exports from disk on the server, then streams the ZIP download.

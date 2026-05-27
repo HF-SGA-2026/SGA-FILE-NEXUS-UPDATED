@@ -1,0 +1,462 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Photo Renamer Tutorial</title>
+    <style>
+      :root {
+        --red: #ee3e33;
+        --ink: #101010;
+        --muted: #626262;
+        --line: #dedede;
+        --soft: #fafafa;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        background: #ffffff;
+        color: var(--ink);
+        font-family: Futura, "Avenir Next", Avenir, Montserrat, "Helvetica Neue", Arial, sans-serif;
+      }
+
+      main {
+        min-height: 100vh;
+        padding: 36px;
+        display: grid;
+        gap: 22px;
+      }
+
+      header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 24px;
+      }
+
+      .brand {
+        display: flex;
+        align-items: center;
+        gap: 24px;
+      }
+
+      .brand img {
+        width: 92px;
+        height: auto;
+      }
+
+      h1 {
+        margin: 0;
+        font-size: clamp(2.4rem, 6vw, 5rem);
+        font-weight: 300;
+        letter-spacing: 0.28em;
+      }
+
+      .eyebrow {
+        margin: 0 0 10px;
+        color: var(--red);
+        font-size: 0.84rem;
+        font-weight: 700;
+        letter-spacing: 0.28em;
+        text-transform: uppercase;
+      }
+
+      .stage {
+        border: 1px solid var(--line);
+        display: grid;
+        grid-template-columns: minmax(320px, 1.15fr) minmax(300px, 0.85fr);
+        min-height: 560px;
+      }
+
+      .visual {
+        min-height: 560px;
+        background:
+          linear-gradient(rgba(238, 62, 51, 0.06), rgba(238, 62, 51, 0.16)),
+          url("../assets/front-page-render.png") center / cover no-repeat;
+        border-right: 1px solid var(--line);
+        position: relative;
+        overflow: hidden;
+      }
+
+      .visual::after {
+        content: "";
+        position: absolute;
+        inset: 0;
+        background: linear-gradient(90deg, rgba(255, 255, 255, 0.12), rgba(255, 255, 255, 0));
+      }
+
+      .callout {
+        position: absolute;
+        left: 42px;
+        bottom: 42px;
+        width: min(78%, 560px);
+        background: rgba(255, 255, 255, 0.92);
+        border: 1px solid var(--line);
+        padding: 24px;
+      }
+
+      .callout strong {
+        display: block;
+        margin-bottom: 8px;
+        color: var(--red);
+        font-size: 0.86rem;
+        letter-spacing: 0.22em;
+        text-transform: uppercase;
+      }
+
+      .callout span {
+        color: var(--muted);
+        line-height: 1.55;
+      }
+
+      .lesson {
+        padding: 52px;
+        display: grid;
+        align-content: center;
+      }
+
+      .lesson h2 {
+        margin: 0;
+        font-size: clamp(2rem, 4.2vw, 4.25rem);
+        line-height: 1.05;
+        font-weight: 500;
+        letter-spacing: 0.04em;
+      }
+
+      .lesson p {
+        margin: 24px 0 0;
+        color: var(--muted);
+        font-size: 1.22rem;
+        line-height: 1.6;
+      }
+
+      .lesson ul {
+        margin: 30px 0 0;
+        padding: 0;
+        list-style: none;
+        display: grid;
+        gap: 16px;
+      }
+
+      .lesson li {
+        display: grid;
+        grid-template-columns: 14px 1fr;
+        gap: 14px;
+        color: var(--ink);
+        font-size: 1.05rem;
+        line-height: 1.45;
+      }
+
+      .lesson li::before {
+        content: "";
+        width: 10px;
+        height: 10px;
+        margin-top: 7px;
+        background: var(--red);
+        border-radius: 50%;
+      }
+
+      .controls {
+        display: grid;
+        grid-template-columns: auto auto auto 1fr auto;
+        align-items: center;
+        gap: 12px;
+      }
+
+      button {
+        appearance: none;
+        border: 1px solid var(--line);
+        background: #fff;
+        color: var(--ink);
+        padding: 15px 20px;
+        font: inherit;
+        font-weight: 800;
+        letter-spacing: 0.16em;
+        text-transform: uppercase;
+        cursor: pointer;
+      }
+
+      button.primary {
+        border-color: var(--red);
+        background: var(--red);
+        color: #fff;
+      }
+
+      button:disabled {
+        color: #aaa;
+        cursor: not-allowed;
+      }
+
+      .progress {
+        height: 12px;
+        border: 1px solid var(--line);
+        background: var(--soft);
+        overflow: hidden;
+      }
+
+      .bar {
+        width: 0%;
+        height: 100%;
+        background: var(--red);
+        transition: width 260ms ease;
+      }
+
+      .counter {
+        color: var(--muted);
+        font-size: 0.9rem;
+        letter-spacing: 0.12em;
+        text-transform: uppercase;
+      }
+
+      .transcript {
+        border: 1px solid var(--line);
+        padding: 20px;
+        min-height: 92px;
+        color: var(--muted);
+        line-height: 1.55;
+      }
+
+      @media (max-width: 900px) {
+        main {
+          padding: 20px;
+        }
+
+        header,
+        .controls {
+          grid-template-columns: 1fr;
+          align-items: stretch;
+        }
+
+        .stage {
+          grid-template-columns: 1fr;
+        }
+
+        .visual {
+          min-height: 320px;
+          border-right: 0;
+          border-bottom: 1px solid var(--line);
+        }
+
+        .lesson {
+          padding: 30px;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <header>
+        <div class="brand">
+          <img src="../assets/logo.png" alt="">
+          <div>
+            <p class="eyebrow">Talking Tutorial</p>
+            <h1>Photo Renamer</h1>
+          </div>
+        </div>
+      </header>
+
+      <section class="stage" aria-live="polite">
+        <div class="visual">
+          <div class="callout">
+            <strong id="calloutTitle">Safety First</strong>
+            <span id="calloutText">The tutorial explains the workflow without changing any files.</span>
+          </div>
+        </div>
+        <article class="lesson">
+          <p class="eyebrow" id="stepLabel">Intro</p>
+          <h2 id="lessonTitle">SGA File Nexus Photo Renamer</h2>
+          <p id="lessonCopy">This guided tutorial walks through the photo renaming workflow from upload to ZIP export.</p>
+          <ul id="lessonBullets"></ul>
+        </article>
+      </section>
+
+      <section class="controls" aria-label="Tutorial controls">
+        <button id="startButton" class="primary" type="button">Start</button>
+        <button id="previousButton" type="button">Back</button>
+        <button id="nextButton" type="button">Next</button>
+        <div class="progress" aria-label="Tutorial progress">
+          <div id="progressBar" class="bar"></div>
+        </div>
+        <span id="counter" class="counter">1 / 8</span>
+      </section>
+
+      <section class="transcript">
+        <p class="eyebrow">Narration</p>
+        <div id="transcriptText">Press Start to hear the tutorial.</div>
+      </section>
+    </main>
+
+    <script>
+      const steps = [
+        {
+          label: "Intro",
+          title: "SGA File Nexus Photo Renamer",
+          copy: "This tutorial explains how to use Photo Renamer to create a clean ZIP export while keeping original files untouched.",
+          bullets: ["The original folder is not changed.", "Everything is previewed before export.", "The workbook report documents the full process."],
+          calloutTitle: "Safety First",
+          calloutText: "Removals only affect the generated ZIP.",
+          narration: "Welcome to the SGA File Nexus Photo Renamer tutorial. This tool helps clean and rename photo folders while keeping the original files untouched. You will review every major change before exporting a ZIP."
+        },
+        {
+          label: "Step 1",
+          title: "Open Photo Renamer",
+          copy: "Log in, open SGA Specific Tools, choose Renaming Systems, then stay on the Photos tab.",
+          bullets: ["Use Photos for image folders.", "PDF tools are separate.", "The switch should stay on Photos for this workflow."],
+          calloutTitle: "Start Here",
+          calloutText: "Open the Photos workflow before loading folders.",
+          narration: "First, open Photo Renamer. Log in to the site, choose SGA Specific Tools, then open Renaming Systems. Make sure the switch is on Photos before you begin."
+        },
+        {
+          label: "Step 2",
+          title: "Load the Main Folder",
+          copy: "Drop or choose the main folder that contains the parent folders you want reviewed.",
+          bullets: ["Choose the main folder, not a secondary folder.", "For huge jobs, use Scan Server Folder.", "System files are ignored automatically."],
+          calloutTitle: "Main Folder",
+          calloutText: "The main folder should contain the parent folders.",
+          narration: "Next, load the main folder. This should be the folder that contains your parent folders. For very large folders, use the server scan option so the website can handle more files."
+        },
+        {
+          label: "Step 3",
+          title: "Select Parent Folders",
+          copy: "In Step 1, select only the parent folders that should be included in the analysis and export.",
+          bullets: ["Selected folders control the analysis.", "Unselected folders are skipped.", "Status badges show what needs attention."],
+          calloutTitle: "Selected Only",
+          calloutText: "The summary updates based on selected parent folders.",
+          narration: "After the folder loads, choose the parent folders you want to process. The analysis tab only counts selected folders, so deselect anything you do not want included."
+        },
+        {
+          label: "Step 4",
+          title: "Review the Summary",
+          copy: "Use Processing Summary to check folder counts, duplicate counts, empty folders, files to rename, and already processed files.",
+          bullets: ["Red numbers need review.", "Removed counts show what will be excluded from the ZIP.", "Counts update when settings change."],
+          calloutTitle: "Processing Summary",
+          calloutText: "This is the quick audit before export.",
+          narration: "Now review the Processing Summary. This shows how many parent folders, secondary folders, and files were scanned. It also shows duplicates, empty folders, files to rename, and already processed files."
+        },
+        {
+          label: "Step 5",
+          title: "Choose Export Controls",
+          copy: "Decide what happens to empty folders, duplicate folders, duplicate files, and identical parent folders.",
+          bullets: ["Keep everything, remove selected items, or auto-remove exact duplicates.", "Auto-remove keeps the first preferred copy.", "Nothing is removed from the computer."],
+          calloutTitle: "Export Controls",
+          calloutText: "These settings control the generated ZIP only.",
+          narration: "Next, choose your export controls. You can keep everything, manually remove selected items, or auto-remove exact duplicates while keeping the first preferred copy. These choices only affect the generated ZIP."
+        },
+        {
+          label: "Step 6",
+          title: "Review Planned Renames",
+          copy: "In Step 2, confirm original secondary folder names, new secondary folder names, original file names, new file names, and status.",
+          bullets: ["Dates become year dot month dot day.", "JPG extensions standardize to lower-case dot jpg.", "Will Be Removed means excluded from ZIP only."],
+          calloutTitle: "Preview First",
+          calloutText: "Every planned rename is listed before export.",
+          narration: "Then review planned renames. Confirm the original secondary folder name, the new secondary folder name, the original file name, the new file name, and the status. Date folders are cleaned into year dot month dot day format."
+        },
+        {
+          label: "Step 7",
+          title: "Export ZIP and Report",
+          copy: "Create the ZIP, download it, then download the workbook report for a detailed audit trail.",
+          bullets: ["The ZIP contains the cleaned export.", "The workbook records files, folders, statuses, and changes.", "Original files remain untouched."],
+          calloutTitle: "Final Output",
+          calloutText: "Export the ZIP and keep the workbook for records.",
+          narration: "Finally, create the ZIP and download the report workbook. The ZIP contains the cleaned folder structure, and the workbook records what changed, what was removed from the ZIP, and what was copied unchanged."
+        }
+      ];
+
+      const els = {
+        start: document.getElementById("startButton"),
+        previous: document.getElementById("previousButton"),
+        next: document.getElementById("nextButton"),
+        progress: document.getElementById("progressBar"),
+        counter: document.getElementById("counter"),
+        stepLabel: document.getElementById("stepLabel"),
+        title: document.getElementById("lessonTitle"),
+        copy: document.getElementById("lessonCopy"),
+        bullets: document.getElementById("lessonBullets"),
+        calloutTitle: document.getElementById("calloutTitle"),
+        calloutText: document.getElementById("calloutText"),
+        transcript: document.getElementById("transcriptText")
+      };
+
+      let index = 0;
+      let playing = false;
+
+      function renderStep() {
+        const step = steps[index];
+        els.stepLabel.textContent = step.label;
+        els.title.textContent = step.title;
+        els.copy.textContent = step.copy;
+        els.calloutTitle.textContent = step.calloutTitle;
+        els.calloutText.textContent = step.calloutText;
+        els.transcript.textContent = step.narration;
+        els.bullets.innerHTML = "";
+        step.bullets.forEach(text => {
+          const li = document.createElement("li");
+          li.textContent = text;
+          els.bullets.appendChild(li);
+        });
+        els.progress.style.width = `${((index + 1) / steps.length) * 100}%`;
+        els.counter.textContent = `${index + 1} / ${steps.length}`;
+        els.previous.disabled = index === 0;
+        els.next.disabled = index === steps.length - 1;
+      }
+
+      function speakCurrent() {
+        if (!("speechSynthesis" in window)) {
+          els.transcript.textContent += " Speech is not available in this browser.";
+          return;
+        }
+        window.speechSynthesis.cancel();
+        const utterance = new SpeechSynthesisUtterance(steps[index].narration);
+        utterance.rate = 0.92;
+        utterance.pitch = 1;
+        utterance.onend = () => {
+          if (playing && index < steps.length - 1) {
+            index += 1;
+            renderStep();
+            setTimeout(speakCurrent, 450);
+          } else {
+            playing = false;
+            els.start.textContent = index === steps.length - 1 ? "Replay" : "Start";
+          }
+        };
+        window.speechSynthesis.speak(utterance);
+      }
+
+      els.start.addEventListener("click", () => {
+        if (playing) {
+          playing = false;
+          window.speechSynthesis?.cancel();
+          els.start.textContent = "Start";
+          return;
+        }
+        if (index === steps.length - 1) index = 0;
+        playing = true;
+        els.start.textContent = "Pause";
+        renderStep();
+        speakCurrent();
+      });
+
+      els.previous.addEventListener("click", () => {
+        index = Math.max(0, index - 1);
+        playing = false;
+        window.speechSynthesis?.cancel();
+        els.start.textContent = "Start";
+        renderStep();
+      });
+
+      els.next.addEventListener("click", () => {
+        index = Math.min(steps.length - 1, index + 1);
+        playing = false;
+        window.speechSynthesis?.cancel();
+        els.start.textContent = "Start";
+        renderStep();
+      });
+
+      renderStep();
+    </script>
+  </body>
+</html>

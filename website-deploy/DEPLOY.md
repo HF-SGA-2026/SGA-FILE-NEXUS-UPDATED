@@ -1,4 +1,4 @@
-# Deploy SGA FILE RENAME as a Website
+# Deploy SGA FILE NEXUS as a Website
 
 This folder is the website-only version. Upload this entire `website-deploy` folder to a static website host.
 

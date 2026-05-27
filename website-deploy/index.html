@@ -3,24 +3,246 @@
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>SGA FILE RENAME</title>
+    <title>SGA FILE NEXUS</title>
     <link rel="stylesheet" href="styles.css">
   </head>
-  <body>
+  <body data-tool="home" data-workflow="photos" data-auth="logged-out" data-auth-view="login">
+    <section id="loginScreen" class="login-screen" aria-label="Login">
+      <div class="login-card">
+        <a class="logo-link" href="https://www.samgarciaarchitect.com" aria-label="Open Sam Garcia Architect website">
+          <img src="assets/logo.png" alt="" class="login-logo">
+        </a>
+        <p class="eyebrow">Secure Access</p>
+        <h1>SGA FILE NEXUS</h1>
+        <p class="login-copy">Sign in to open the data hygiene toolkit.</p>
+        <form id="loginForm" class="login-form">
+          <label>
+            Email
+            <input id="loginEmail" type="email" autocomplete="email" placeholder="name@example.com" required>
+          </label>
+          <label>
+            Password
+            <span class="password-field">
+              <input id="loginPassword" type="password" autocomplete="current-password" placeholder="Password" required>
+              <button class="show-password-button" type="button" data-toggle-password="loginPassword">Show</button>
+            </span>
+          </label>
+          <button class="button primary wide" type="submit">Login</button>
+        </form>
+        <button id="googleLoginButton" class="google-login-button" type="button">
+          <span>G</span>
+          Continue with Google
+        </button>
+        <button id="forgotPasswordButton" class="forgot-password-button" type="button">Forgot password?</button>
+        <p id="loginError" class="login-error" aria-live="polite"></p>
+      </div>
+    </section>
+
+    <section id="resetPasswordScreen" class="login-screen reset-password-screen" aria-label="Reset password">
+      <div class="login-card">
+        <a class="logo-link" href="https://www.samgarciaarchitect.com" aria-label="Open Sam Garcia Architect website">
+          <img src="assets/logo.png" alt="" class="login-logo">
+        </a>
+        <p class="eyebrow">Password Reset</p>
+        <h1>RESET ACCESS</h1>
+        <p class="login-copy">Enter your email and create a new password.</p>
+        <form id="resetPasswordForm" class="login-form">
+          <label>
+            Email
+            <input id="resetEmail" type="email" autocomplete="email" placeholder="name@example.com" required>
+          </label>
+          <button id="sendResetCodeButton" class="button secondary wide" type="button">Send Verification Code</button>
+          <label>
+            Verification Code
+            <input id="resetCode" type="text" inputmode="numeric" autocomplete="one-time-code" placeholder="6-digit code" required>
+          </label>
+          <label>
+            New Password
+            <span class="password-field">
+              <input id="resetPassword" type="password" autocomplete="new-password" placeholder="New password" required>
+              <button class="show-password-button" type="button" data-toggle-password="resetPassword">Show</button>
+            </span>
+          </label>
+          <button class="button primary wide" type="submit">Reset Password</button>
+        </form>
+        <button id="backToLoginButton" class="forgot-password-button" type="button">Back to sign in</button>
+        <p id="resetMessage" class="login-error" aria-live="polite"></p>
+      </div>
+    </section>
+
     <main class="app-shell">
+      <button id="quickLogoutButton" class="button compact quick-logout-button" type="button">Logout</button>
       <header class="app-header">
         <div>
           <p class="eyebrow">Browser website</p>
           <h1 class="brand-title">
-            <img src="assets/logo.png" alt="" class="brand-logo">
-            <span>SGA FILE RENAME</span>
+            <a class="logo-link" href="https://www.samgarciaarchitect.com" aria-label="Open Sam Garcia Architect website">
+              <img src="assets/logo.png" alt="" class="brand-logo">
+            </a>
+            <span id="brandText">SGA FILE NEXUS</span>
           </h1>
-          <p class="header-copy">Drop or choose a main folder, select parent folders, review the rename list, then download the updated folder as a ZIP.</p>
+          <p id="workflowSubtitle" class="workflow-subtitle">Tool Hub</p>
+          <p id="headerCopy" class="header-copy">Choose a hygiene tool to review, clean, rename, or package folders with a clear preview before anything is exported.</p>
         </div>
-        <div class="library-status" id="libraryStatus">Checking libraries...</div>
+        <div class="header-tools">
+          <button id="homeButton" class="button compact home-button" type="button">Back</button>
+          <section class="mode-switch" aria-label="Choose file workflow">
+            <button id="photosModeButton" class="mode-button active" type="button" aria-pressed="true" title="Use the photo renaming workflow.">Photos</button>
+            <button id="pdfsModeButton" class="mode-button" type="button" aria-pressed="false" title="Switch to the PDF renaming workflow.">PDFs</button>
+          </section>
+          <div class="library-status" id="libraryStatus">Checking libraries...</div>
+        </div>
       </header>
 
-      <section class="upload-hero">
+      <section id="homeWorkspace" class="home-workspace">
+        <section class="panel hub-panel">
+          <button id="settingsButton" class="settings-icon-button" type="button" title="Open settings" aria-label="Open settings">⚙</button>
+          <div class="section-heading">
+            <div>
+              <p class="eyebrow">Main Page</p>
+              <h2>Tools</h2>
+            </div>
+          </div>
+          <img class="home-hero-image" src="assets/front-page-render.png" alt="">
+          <div class="tool-grid">
+            <button id="folderDiscarderButton" class="tool-card active-tool-card" type="button" title="Open SGA Empty Folder Discarder.">
+              <span>SGA Empty Folder Discarder</span>
+              <small>Review folders before removing them from an export.</small>
+            </button>
+            <button id="blankDuplicateDiscarderButton" class="tool-card active-tool-card" type="button" title="Open SGA Backup Discarder.">
+              <span>SGA Backup Discarder</span>
+              <small>Find blank items and duplicate content for cleanup.</small>
+            </button>
+            <button id="firmToolsButton" class="tool-card active-tool-card" type="button" title="Open SGA-specific renaming and file tools.">
+              <span>SGA Specific Tools</span>
+              <small>Photo Renamer and File Renamer live here.</small>
+            </button>
+          </div>
+        </section>
+      </section>
+
+      <section id="settingsOverlay" class="settings-overlay" aria-hidden="true">
+        <div class="settings-backdrop" data-close-settings></div>
+        <aside class="settings-panel" role="dialog" aria-modal="true" aria-labelledby="settingsTitle">
+          <div class="settings-header">
+            <div>
+              <p class="eyebrow">Settings</p>
+              <h2 id="settingsTitle">Website Settings</h2>
+            </div>
+            <button id="settingsCloseButton" class="settings-close-button" type="button" aria-label="Close settings">X</button>
+          </div>
+          <div class="settings-group">
+            <h3>Account</h3>
+            <div class="settings-row">
+              <span>
+                <strong>Signed in as</strong>
+                <small id="accountName">Not signed in</small>
+              </span>
+              <button id="logoutButton" class="button compact" type="button">Log Out</button>
+            </div>
+          </div>
+          <div class="settings-group">
+            <h3>General</h3>
+            <label class="settings-row">
+              <span>
+                <strong>Confirm before export</strong>
+                <small>Show a final review step before creating downloads.</small>
+              </span>
+              <input type="checkbox" checked>
+            </label>
+            <label class="settings-row">
+              <span>
+                <strong>Show activity log</strong>
+                <small>Keep scan and export messages visible while tools run.</small>
+              </span>
+              <input type="checkbox" checked>
+            </label>
+          </div>
+          <div class="settings-group">
+            <h3>Downloads</h3>
+            <label class="settings-row">
+              <span>
+                <strong>Default export format</strong>
+                <small>Choose the preferred package type for completed jobs.</small>
+              </span>
+              <select aria-label="Default export format">
+                <option>ZIP</option>
+                <option disabled>Workbook</option>
+              </select>
+            </label>
+            <label class="settings-row">
+              <span>
+                <strong>Workbook reports</strong>
+                <small>Include detailed audit sheets when reports are downloaded.</small>
+              </span>
+              <input type="checkbox" checked>
+            </label>
+          </div>
+          <div class="settings-group">
+            <h3>Safety</h3>
+            <label class="settings-row">
+              <span>
+                <strong>Protect original folders</strong>
+                <small>All removals only affect generated exports.</small>
+              </span>
+              <input type="checkbox" checked disabled>
+            </label>
+          </div>
+        </aside>
+      </section>
+
+      <section id="firmWorkspace" class="firm-workspace">
+        <section class="panel hub-panel">
+          <div class="section-heading">
+            <div>
+              <p class="eyebrow">SGA Specific Tools</p>
+              <h2>SGA Specific Tools</h2>
+            </div>
+          </div>
+          <div class="tool-grid firm-tool-grid">
+            <button id="constructionToolsButton" class="tool-card active-tool-card" type="button" title="Open Construction Document Tools.">
+              <span>Construction Document Tools</span>
+              <small>Construction document cleanup and review tools will live here.</small>
+            </button>
+            <button id="renamingSystemsButton" class="tool-card active-tool-card" type="button" title="Open the current SGA File Nexus renaming website.">
+              <span>Renaming Systems</span>
+              <small>Open the current SGA File Nexus photo and file renaming website.</small>
+            </button>
+          </div>
+        </section>
+      </section>
+
+      <section id="folderDiscarderWorkspace" class="folder-discarder-workspace">
+        <section class="panel hub-panel">
+          <div class="pdf-coming-soon">Coming soon!</div>
+        </section>
+      </section>
+
+      <section id="blankDuplicateWorkspace" class="blank-duplicate-workspace">
+        <section class="panel hub-panel">
+          <div class="pdf-coming-soon">Coming soon!</div>
+        </section>
+      </section>
+
+      <section id="constructionWorkspace" class="construction-workspace">
+        <section class="panel hub-panel">
+          <div class="pdf-coming-soon">Coming soon!</div>
+        </section>
+      </section>
+
+      <section id="sgaToolWorkspace" class="tool-workspace">
+        <section class="panel pdf-workspace" aria-label="PDF workflow">
+          <div class="pdf-coming-soon">Coming soon!</div>
+        </section>
+
+        <a class="tutorial-workspace tutorial-page-button" href="tutorials/photo-renamer-talking-tutorial.html" aria-label="Open Photo Renamer tutorial">
+          <span>
+            <span class="eyebrow">Tutorial</span>
+            <strong>Photo Renamer Walkthrough</strong>
+          </span>
+        </a>
+
+        <section class="upload-hero">
         <div id="dropZone" class="drop-zone" tabindex="0">
           <div class="drop-icon" aria-hidden="true">+</div>
           <div class="drop-copy">
@@ -28,6 +250,10 @@
             <p>Folder names stay unchanged. Only selected parent folders are processed.</p>
             <button id="chooseFolderButton" class="inline-folder-choice" type="button">Choose Main Folder</button>
             <input id="folderInput" class="folder-input" type="file" webkitdirectory directory multiple>
+            <div class="server-folder-row">
+              <input id="serverFolderPathInput" type="text" placeholder="/Users/you/Desktop/Main Folder" aria-label="Server folder path">
+              <button id="serverScanButton" class="button compact" type="button">Scan Server Folder</button>
+            </div>
           </div>
         </div>
         <button id="clearButton" class="button secondary clear-upload-button" type="button">Clear</button>
@@ -51,18 +277,43 @@
             <div id="parentList" class="parent-list" aria-live="polite"></div>
           </section>
 
-          <section class="panel action-panel">
+          <section class="panel controls-panel">
             <div class="section-heading">
               <div>
-                <p class="eyebrow">Step 3</p>
-                <h2>Create ZIP</h2>
+                <p class="eyebrow">Settings</p>
+                <h2>Export Controls</h2>
               </div>
             </div>
-            <div class="primary-action-stack">
-              <button id="renameButton" class="button primary wide" type="button" disabled>Rename Files</button>
-              <button id="downloadButton" class="button success wide" type="button" disabled>Download ZIP</button>
+            <div class="controls-grid">
+              <div class="control-group">
+                <p class="control-label">Already processed</p>
+                <label><input type="checkbox" id="skipProcessedInput" checked> Skip already processed folders</label>
+              </div>
+              <div class="control-group">
+                <p class="control-label">Empty folders</p>
+                <label><input type="radio" name="emptyFolderMode" value="keep"> Keep empty folders</label>
+                <label><input type="radio" name="emptyFolderMode" value="selected"> Remove selected empty folders from ZIP</label>
+                <label><input type="radio" name="emptyFolderMode" value="exact" checked> Auto-remove all empty folders from ZIP</label>
+              </div>
+              <div class="control-group">
+                <p class="control-label">Duplicate folders</p>
+                <label><input type="radio" name="duplicateMode" value="keep"> Keep all duplicate folders</label>
+                <label><input type="radio" name="duplicateMode" value="selected"> Remove selected duplicate folders</label>
+                <label><input type="radio" name="duplicateMode" value="exact" checked> Auto-remove exact duplicate folders, keeping first copy</label>
+              </div>
+              <div class="control-group">
+                <p class="control-label">Duplicate files</p>
+                <label><input type="radio" name="duplicateFileMode" value="keep"> Keep all duplicate files</label>
+                <label><input type="radio" name="duplicateFileMode" value="selected"> Remove only the duplicate files selected below</label>
+                <label><input type="radio" name="duplicateFileMode" value="exact" checked> Auto-remove exact duplicate files, keeping first copy</label>
+              </div>
+              <div class="control-group">
+                <p class="control-label">Identical parent folders</p>
+                <label><input type="radio" name="parentDuplicateMode" value="keep"> Keep all identical parent folders</label>
+                <label><input type="radio" name="parentDuplicateMode" value="selected"> Remove selected identical parent folders</label>
+                <label><input type="radio" name="parentDuplicateMode" value="exact" checked> Auto-remove identical parent folders, keeping first copy</label>
+              </div>
             </div>
-            <p id="zipInfo" class="zip-info muted">ZIP will be available after processing.</p>
           </section>
 
           <section class="panel log-panel">
@@ -78,6 +329,57 @@
         </aside>
 
         <section class="main-column">
+          <section class="panel summary-panel">
+            <div class="section-heading">
+              <div>
+                <p class="eyebrow">Analysis</p>
+                <h2>Processing Summary</h2>
+              </div>
+            </div>
+            <div class="summary-grid">
+              <div class="scan-stat"><strong id="summaryParentFolders">0</strong><span>Parent folders scanned</span></div>
+              <div class="scan-stat"><strong id="summaryFolders">0</strong><span>Secondary folders scanned</span></div>
+              <div class="scan-stat"><strong id="summaryFilesScanned">0</strong><span>Files scanned</span></div>
+              <div class="summary-divider" aria-hidden="true"></div>
+              <div class="alert-stat"><strong id="summaryDuplicateParents">0</strong><span>Duplicate parent folders found</span></div>
+              <div class="alert-stat"><strong id="summaryDuplicateFolders">0</strong><span>Duplicate secondary folders found</span></div>
+              <div class="alert-stat"><strong id="summaryDuplicateFiles">0</strong><span>Duplicate files found</span></div>
+              <div class="alert-stat"><strong id="summaryEmptyParents">0</strong><span>Empty parent folders found</span></div>
+              <div class="alert-stat"><strong id="summaryEmpty">0</strong><span>Empty secondary folders found</span></div>
+              <div class="alert-stat"><strong id="summarySecondaryNeeds">0</strong><span>Secondary folders to rename</span></div>
+              <div class="alert-stat"><strong id="summaryNeeds">0</strong><span>Files to rename</span></div>
+              <div class="alert-stat"><strong id="summarySecondaryProcessed">0</strong><span>Secondary folders already processed</span></div>
+              <div class="alert-stat"><strong id="summaryProcessed">0</strong><span>Files already processed</span></div>
+            </div>
+          </section>
+
+          <section class="panel analysis-panel">
+            <div class="section-heading">
+              <div>
+                <p class="eyebrow">Folder and File Review</p>
+                <h2>Empty Folders and Duplicates</h2>
+              </div>
+            </div>
+            <div class="analysis-grid">
+              <div id="emptyFolderReview" class="analysis-block">
+                <h3>Empty Folders</h3>
+                <div id="emptyFolderList" class="analysis-list muted">No folder loaded.</div>
+              </div>
+              <div id="duplicateFolderReview" class="analysis-block">
+                <h3>Duplicate Folders</h3>
+                <div id="duplicateFolderList" class="analysis-list muted">No folder loaded.</div>
+              </div>
+              <div id="duplicateFileReview" class="analysis-block">
+                <h3>Duplicate Files</h3>
+                <div id="duplicateFileList" class="analysis-list muted">No folder loaded.</div>
+              </div>
+              <div id="identicalParentReview" class="analysis-block">
+                <h3>Identical Parent Folders</h3>
+                <div id="identicalParentList" class="analysis-list muted">No folder loaded.</div>
+              </div>
+            </div>
+          </section>
+
           <section class="panel preview-panel">
             <div class="section-heading">
               <div>
@@ -89,19 +391,37 @@
               <table>
                 <thead>
                   <tr>
+                    <th>#</th>
                     <th>Parent folder</th>
-                    <th>Secondary folder</th>
+                    <th>Original secondary folder&nbsp;name</th>
+                    <th>New secondary folder&nbsp;name</th>
                     <th>Original file name</th>
                     <th>New file name</th>
+                    <th>Status</th>
                   </tr>
                 </thead>
                 <tbody id="previewBody">
                   <tr>
-                    <td colspan="4" class="empty-state">Load a folder to preview renames.</td>
+                    <td colspan="7" class="empty-state">Load a folder to preview renames.</td>
                   </tr>
                 </tbody>
               </table>
             </div>
+          </section>
+
+          <section class="panel action-panel">
+            <div class="section-heading">
+              <div>
+                <p class="eyebrow">Step 3</p>
+                <h2>Create ZIP</h2>
+              </div>
+            </div>
+            <div class="primary-action-stack">
+              <button id="renameButton" class="button primary wide" type="button" disabled title="Create the ZIP using the current preview and settings.">Export ZIP</button>
+              <button id="downloadButton" class="button success wide" type="button" disabled title="Save the generated ZIP after export is complete.">Download ZIP</button>
+              <button id="reportButton" class="button secondary wide" type="button" disabled title="Download an Excel workbook report with the summary, review sections, and planned renames.">Download Report</button>
+            </div>
+            <p id="zipInfo" class="zip-info muted">ZIP will be available after processing.</p>
           </section>
 
           <section class="panel progress-panel">
@@ -133,6 +453,7 @@
             </div>
           </section>
         </section>
+      </section>
       </section>
     </main>
 

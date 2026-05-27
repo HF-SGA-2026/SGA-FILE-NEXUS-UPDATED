@@ -1,0 +1,9 @@
+{
+  "name": "sga-file-nexus",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Local server for the SGA FILE NEXUS website.",
+  "scripts": {
+    "start": "node server.js"
+  }
+}
