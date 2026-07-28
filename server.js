@@ -4,12 +4,14 @@ const fsp = require("fs/promises");
 const path = require("path");
 const crypto = require("crypto");
 const JSZip = require("./website-deploy/vendor/jszip.min.js");
+const { createFolderDiscarderService } = require("./backend/folder-discarder-service");
 
 const PORT = Number(process.env.PORT || 8080);
 const HOST = process.env.HOST || "127.0.0.1";
 const PUBLIC_DIR = path.join(__dirname, "website-deploy");
 const SCANS = new Map();
 const EXPORTS = new Map();
+const folderDiscarderService = createFolderDiscarderService();
 
 const MIME_TYPES = {
   ".html": "text/html; charset=utf-8",
@@ -73,6 +75,10 @@ const server = http.createServer((req, res) => {
 
   if (req.method === "GET" && req.url.startsWith("/api/download-server-folder-export/")) {
     handleDownloadServerFolderExport(req, res);
+    return;
+  }
+
+  if (folderDiscarderService.handle(req, res)) {
     return;
   }
 

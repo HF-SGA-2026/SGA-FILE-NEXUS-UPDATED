@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>SGA FILE NEXUS</title>
     <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="folder-discarder.css">
   </head>
   <body data-tool="home" data-workflow="photos" data-auth="logged-out" data-auth-view="login">
     <section id="loginScreen" class="login-screen" aria-label="Login">
@@ -213,9 +214,12 @@
       </section>
 
       <section id="folderDiscarderWorkspace" class="folder-discarder-workspace">
-        <section class="panel hub-panel">
-          <div class="pdf-coming-soon">Coming soon!</div>
-        </section>
+        <iframe
+          class="folder-discarder-frame"
+          src="folder-discarder/index.html?embedded=1"
+          title="SGA Empty Folder Discarder"
+          loading="eager"
+        ></iframe>
       </section>
 
       <section id="blankDuplicateWorkspace" class="blank-duplicate-workspace">
@@ -470,5 +474,6 @@
       }
     </script>
     <script src="app.js"></script>
+    <script src="folder-discarder.js"></script>
   </body>
 </html>

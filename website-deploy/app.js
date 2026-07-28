@@ -522,7 +522,7 @@ function updateToolMode() {
     els.headerCopy.textContent = "Choose a firm-specific tool group.";
   } else if (state.activeTool === "folder-discarder") {
     els.workflowSubtitle.textContent = "SGA Empty Folder Discarder";
-    els.headerCopy.textContent = "Folder discard tools are coming soon.";
+    els.headerCopy.textContent = "Scan, review, report, and quarantine empty folders without changing unrelated files.";
   } else if (state.activeTool === "blank-duplicate") {
     els.workflowSubtitle.textContent = "SGA Backup Discarder";
     els.headerCopy.textContent = "SGA backup discard tools are coming soon.";

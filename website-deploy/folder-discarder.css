@@ -1,0 +1,26 @@
+#folderDiscarderWorkspace {
+  min-width: 0;
+}
+
+#folderDiscarderWorkspace .folder-discarder-frame {
+  display: block;
+  width: 100%;
+  min-height: 1180px;
+  border: 0;
+  border-radius: 18px;
+  background: #f6f3ed;
+}
+
+@media (max-width: 900px) {
+  #folderDiscarderWorkspace .folder-discarder-frame {
+    min-height: 1480px;
+    border-radius: 14px;
+  }
+}
+
+@media (max-width: 640px) {
+  #folderDiscarderWorkspace .folder-discarder-frame {
+    min-height: 1760px;
+    border-radius: 12px;
+  }
+}
