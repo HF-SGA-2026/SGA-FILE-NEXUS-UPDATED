@@ -1602,3 +1602,10 @@ tr:last-child td {
     grid-template-columns: 1fr;
   }
 }
+
+.backup-discarder-frame {
+  width: 100%;
+  min-height: 1200px;
+  border: none;
+  display: block;
+}

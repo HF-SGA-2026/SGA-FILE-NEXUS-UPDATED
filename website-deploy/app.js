@@ -525,7 +525,7 @@ function updateToolMode() {
     els.headerCopy.textContent = "Scan, review, report, and quarantine empty folders without changing unrelated files.";
   } else if (state.activeTool === "blank-duplicate") {
     els.workflowSubtitle.textContent = "SGA Backup Discarder";
-    els.headerCopy.textContent = "SGA backup discard tools are coming soon.";
+    els.headerCopy.textContent = "";
   } else if (state.activeTool === "construction") {
     els.workflowSubtitle.textContent = "Construction Document Tools";
     els.headerCopy.textContent = "Construction document cleanup and review tools are coming soon.";

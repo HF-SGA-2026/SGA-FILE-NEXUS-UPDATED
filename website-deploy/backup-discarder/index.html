@@ -1,0 +1,287 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>SGA File Nexus</title>
+    <link rel="stylesheet" href="styles.css?v=local-backend-progress">
+  </head>
+  <body>
+    <main class="app-shell">
+      <div class="dashboard-layout">
+        <div class="main-column">
+          
+
+          <section class="upload-hero">
+            <div class="header-status-stack" style="margin-bottom:20px;">
+              <div class="library-status" id="libraryStatus">Checking libraries...</div>
+              <button
+                id="serverStatusButton"
+                class="library-status server-status disconnected"
+                type="button">
+                Local server disconnected
+              </button>
+            </div>
+            <div id="dropZone" class="drop-zone" tabindex="0">
+              <div class="drop-icon" aria-hidden="true">+</div>
+              <div class="drop-copy">
+                <h2>Drop main folder</h2>
+                <p>Folder names stay unchanged. Images, documents, CAD, design, video, and other files are scanned.</p>
+                <button id="chooseFolderButton" class="inline-folder-choice" type="button">Choose Main Folder</button>
+                <input id="folderInput" class="folder-input" type="file" webkitdirectory directory multiple>
+                <input id="fileInput" class="folder-input" type="file" accept=".zip,application/zip,application/x-zip-compressed" multiple>
+              </div>
+            </div>
+            <div class="upload-actions">
+              <button id="refreshScanButton" class="button secondary clear-upload-button" type="button" disabled>
+                Refresh Scan
+              </button>
+              <button id="clearButton" class="button secondary clear-upload-button" type="button">
+                Clear
+              </button>
+            </div>
+          </section>
+
+          <section class="workflow-steps" aria-label="Workflow steps">
+            <button class="workflow-step active-step" data-step="1" type="button">
+              <span class="step-circle">1</span>
+              <span class="step-copy">
+                <span class="eyebrow">Step 1</span>
+                <strong>Folders &amp; Flags</strong>
+                <small id="stepFlagCount">0 flagged</small>
+              </span>
+            </button>
+            <span class="step-arrow" aria-hidden="true">→</span>
+            <button class="workflow-step" data-step="2" type="button">
+              <span class="step-circle">2</span>
+              <span class="step-copy">
+                <span class="eyebrow">Step 2</span>
+                <strong>Review Files</strong>
+                <small>Compare matches</small>
+              </span>
+            </button>
+            <span class="step-arrow" aria-hidden="true">→</span>
+            <button class="workflow-step" data-step="3" type="button">
+              <span class="step-circle">3</span>
+              <span class="step-copy">
+                <span class="eyebrow">Step 3</span>
+                <strong>Actions &amp; Review Bin</strong>
+                <small>Move, recover, report</small>
+              </span>
+            </button>
+          </section>
+
+          <section class="workflow-layout">
+            <section class="panel folder-panel">
+              <div class="section-heading">
+                <div>
+                  <p class="eyebrow">Step 1</p>
+                  <h2>Folders &amp; Groups</h2>
+                </div>
+                <span id="previewCount" class="pill">0 files</span>
+              </div>
+              <div id="folderSummary" class="folder-summary muted">No folder loaded.</div>
+              <div class="button-row split">
+                <button id="selectAllButton" class="button compact" type="button" disabled>Select All</button>
+                <button id="deselectAllButton" class="button compact" type="button" disabled>Deselect All</button>
+              </div>
+              <div id="parentList" class="parent-list" aria-live="polite"></div>
+            </section>
+
+            <section class="panel preview-panel">
+              <div class="section-heading">
+                <div>
+                  <p class="eyebrow">Step 2</p>
+                  <h2>Review Files</h2>
+                </div>
+              </div>
+              <div class="review-control-layout">
+                <div class="review-toolbar" aria-label="Review controls">
+                  <label class="search-field">
+                    <span>Search files</span>
+                    <input id="reviewSearch" type="search" placeholder="Search name, folder, or reason" autocomplete="off">
+                  </label>
+                  <label class="select-field">
+                    <span>Sort by</span>
+                    <select id="reviewSort">
+                      <option value="group">Duplicate group</option>
+                      <option value="size">Size</option>
+                      <option value="date">Date</option>
+                      <option value="name">Name</option>
+                    </select>
+                  </label>
+                  <label class="select-field">
+                    <span>Duplicate type</span>
+                    <select id="reviewTypeFilter">
+                      <option value="all">All types</option>
+                    </select>
+                  </label>
+                  <label class="select-field">
+                    <span>File type</span>
+                    <select id="reviewFileTypeFilter">
+                      <option value="all">All file types</option>
+                    </select>
+                  </label>
+                  <div class="select-field folder-tree-field">
+                    <span>Folder path</span>
+                    <button id="folderTreeButton" class="folder-tree-button" type="button">
+                      All folders
+                    </button>
+
+                    <div id="folderTreePanel" class="folder-tree-panel hidden">
+                      <div id="folderTreeList" class="folder-tree-list"></div>
+                    </div>
+
+                    <select id="reviewFolderFilter" class="hidden">
+                      <option value="all">All folders</option>
+                    </select>
+          
+                  </div>
+                </div>
+                <div class="button-row split review-actions" aria-label="Selection controls">
+                  <div class="review-action-group">
+                    <button id="selectFlaggedButton" class="button compact" type="button" disabled>Select All</button>
+                    <button id="deselectFlaggedButton" class="button compact" type="button" disabled>Deselect All</button>
+                  </div>
+                  <div class="review-action-group">
+                    <button id="expandGroupsButton" class="button compact" type="button" disabled>Expand Groups</button>
+                    <button id="collapseGroupsButton" class="button compact" type="button" disabled>Collapse Groups</button>
+                  </div>
+                </div>
+              </div>
+              <div id="tableWrap" class="table-wrap">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>Select</th>
+                      <th>Preview</th>
+                      <th>Label</th>
+                      <th>File name</th>
+                      <th>Folder path</th>
+                      <th>File size</th>
+                      <th>Modified</th>
+                      <th>Reason flagged</th>
+                    </tr>
+                  </thead>
+                  <tbody id="previewBody">
+                    <tr>
+                      <td colspan="8" class="empty-state">Load a folder to review files.</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </section>
+
+            <section class="panel action-panel">
+              <div class="section-heading">
+                <div>
+                  <p class="eyebrow">Step 3</p>
+                  <h2>Actions &amp; Review Bin</h2>
+                </div>
+              </div>
+              <div class="recovery-summary" aria-live="polite">
+                <span>Storage recovered</span>
+                <strong id="recoveredStorage">0 B</strong>
+              </div>
+              <div class="primary-action-stack">
+                <div class="action-group">
+                  <button id="permanentDeleteButton" class="button primary danger wide" type="button" disabled>Delete All</button>
+                  <button id="restoreButton" class="button secondary wide" type="button" disabled>Recover All</button>
+                </div>
+                <div class="action-group">
+                  <button id="groupBackupsButton" class="button secondary wide" type="button" disabled>Group Backups Into One Folder</button>
+                  <button id="downloadGroupedFolderButton" class="button secondary wide" type="button" disabled>Download Grouped Folder</button>
+                  <button id="discardButton" class="button primary wide" type="button" disabled>Move to Review Bin</button>
+                </div>
+                <div class="action-group">
+                  <button id="downloadExcelButton" class="button success wide" type="button" disabled>Download CSV Report</button>
+                  <button id="downloadPdfButton" class="button success wide" type="button" disabled>Download PDF Report</button>
+                </div>
+              </div>
+              <p id="zipInfo" class="zip-info muted">Report will be available after files are moved to Review Bin.</p>
+              <div class="review-bin">
+                <div class="review-bin-heading">
+                  <span>Review Bin</span>
+                  <strong id="reviewBinCount">0 files</strong>
+                </div>
+                <div id="reviewBinList" class="review-bin-list muted">No files in Review Bin.</div>
+              </div>
+            </section>
+          </section>
+        </div>
+
+        <aside class="sidebar-column" aria-label="Progress and activity">
+          <section class="panel progress-panel workflow-progress">
+            <div class="section-heading">
+              <div>
+                <p class="eyebrow">Progress</p>
+                <h2>Progress</h2>
+              </div>
+              <div class="status-chip" id="statusText">Waiting for a folder.</div>
+            </div>
+
+            <div class="progress-stack">
+              <div class="status-line">
+                <span id="progressLabel">Cleanup impact</span>
+                <span id="percentText">0%</span>
+              </div>
+              <div class="progress-track" aria-label="Progress">
+                <div id="progressBar" class="progress-bar"></div>
+              </div>
+              <div class="metrics">
+                <div><strong id="totalFiles">0</strong><span>Total files</span></div>
+                <div class="keep-metric"><strong id="filesToKeep">0</strong><span>Files to keep</span></div>
+                <div class="delete-metric"><strong id="selectedDeletionFiles">0</strong><span>Selected for deletion</span></div>
+                <div><strong id="originalStorage">0 B</strong><span>Original storage</span></div>
+                <div class="delete-metric"><strong id="storageToRecover">0 B</strong><span>Storage to recover</span></div>
+                <div class="after-cleanup-metric"><strong id="storageAfterCleanup">0 B</strong><span>Storage after cleanup</span></div>
+                <div><strong id="elapsedTime">00:00</strong><span>Elapsed time</span></div>
+              </div>
+            </div>
+          </section>
+
+          <section class="panel log-panel workflow-log">
+            <div class="section-heading">
+              <div>
+                <p class="eyebrow">Log</p>
+                <h2>Log - Activity and Errors</h2>
+              </div>
+              <button id="clearLogButton" class="button compact" type="button">Clear</button>
+            </div>
+            <div id="messageLog" class="message-log" aria-live="polite"></div>
+          </section>
+        </aside>
+      </div>
+    </main>
+
+    <div id="confirmModal" class="modal-backdrop" hidden>
+      <section class="panel confirm-modal danger-confirm" role="dialog" aria-modal="true" aria-labelledby="confirmTitle">
+        <div class="section-heading">
+          <div>
+            <p class="eyebrow">Confirm deletion</p>
+            <h2 id="confirmTitle">Move selected files?</h2>
+          </div>
+        </div>
+        <p id="confirmSummary" class="modal-copy muted">No files selected.</p>
+        <div class="button-row modal-actions">
+          <button id="cancelDeleteButton" class="button secondary" type="button">Cancel</button>
+          <button id="confirmDeleteButton" class="button primary" type="button">Move Files</button>
+        </div>
+      </section>
+    </div>
+    <div id="previewModal" class="modal-backdrop" hidden>
+      <section class="panel preview-modal" role="dialog" aria-modal="true" aria-labelledby="previewTitle">
+        <div class="section-heading">
+          <div>
+            <p class="eyebrow">File preview</p>
+            <h2 id="previewTitle">Preview</h2>
+          </div>
+          <button id="closePreviewButton" class="button compact" type="button">Close</button>
+        </div>
+        <div id="previewContent" class="preview-content"></div>
+      </section>
+    </div>
+    <script src="vendor/jszip.min.js"></script>
+    <script src="app.js?v=recycle-bin-delete"></script>
+  </body>
+</html>
