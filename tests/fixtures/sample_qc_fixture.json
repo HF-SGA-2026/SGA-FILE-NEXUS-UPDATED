@@ -1,0 +1,66 @@
+{
+  "index_entries": [
+    {"sheet_number": "G001", "sheet_name": "COVER SHEET", "index_position": 1, "page_number": 1, "confidence": 95, "source": "fixture"},
+    {"sheet_number": "A101", "sheet_name": "FLOOR PLAN", "index_position": 2, "page_number": 1, "confidence": 95, "source": "fixture"},
+    {"sheet_number": "A201", "sheet_name": "EXTERIOR ELEVATIONS", "index_position": 3, "page_number": 1, "confidence": 95, "source": "fixture"}
+  ],
+  "physical_entries": [
+    {"sheet_number": "G001", "sheet_name": "COVER SHEET", "page_number": 1, "confidence": 95, "source": "fixture"},
+    {"sheet_number": "A101", "sheet_name": "FLOOR PLAN", "page_number": 2, "confidence": 95, "source": "fixture"},
+    {"sheet_number": "A201", "sheet_name": "EXTERIOR ELEVATIONS", "page_number": 3, "confidence": 95, "source": "fixture"}
+  ],
+  "cover_pages": [
+    {
+      "page_number": 1,
+      "sheet_number": "G001",
+      "title_block_text": "PROJECT: MAIN STREET OFFICE PROJECT NO. 2026-001",
+      "text": "MAIN STREET OFFICE COVER SHEET PROJECT TITLE PROJECT: MAIN STREET OFFICE PROJECT NO. 2026-001 RENDERING TABS 20260001 DESIGN CONSULTANT TEAM CIVIL STRUCTURAL MECHANICAL ELECTRICAL PLUMBING OWNER MAIN STREET HOLDINGS VICINITY MAP SHEET INDEX ISSUED FOR PERMIT 05/21/2026 PERMIT SET REGISTERED ARCHITECT SEAL"
+    }
+  ],
+  "viewport_page_with_keynotes": {
+    "page_number": 2,
+    "sheet_number": "A101",
+    "text": "1 FLOOR PLAN 1/8\" = 1'-0\" SHEET KEYNOTES 1 WALL 2 DOOR KEYNOTE 1 KEYNOTE 2"
+  },
+  "viewport_page_without_keynotes": {
+    "page_number": 3,
+    "sheet_number": "A201",
+    "text": "2 ELEVATION 1/4\" = 1'-0\" SHEET KEYNOTES 1 BRICK 2 STOREFRONT"
+  },
+  "viewport_page_with_graphic_keynote_symbol": {
+    "page_number": 7,
+    "sheet_number": "A111",
+    "text": "1 FLOOR PLAN 1/8\" = 1'-0\" SHEET KEYNOTES 1 WALL 2 DOOR",
+    "keynote_symbols": {
+      "present": true,
+      "numbers": ["2"],
+      "count": 1,
+      "confidence": 82,
+      "source": "graphic",
+      "symbols": [{"numbers": ["2"], "bbox": [300, 100, 380, 170], "confidence": 82, "source": "vector"}]
+    }
+  },
+  "viewport_page_with_unnumbered_graphic_keynote_symbol": {
+    "page_number": 8,
+    "sheet_number": "A112",
+    "text": "1 FLOOR PLAN 1/8\" = 1'-0\" SHEET KEYNOTES 1 WALL 2 DOOR",
+    "keynote_symbols": {
+      "present": true,
+      "numbers": [],
+      "count": 1,
+      "confidence": 64,
+      "source": "graphic",
+      "symbols": [{"numbers": [], "bbox": [300, 100, 380, 170], "confidence": 64, "source": "vector"}]
+    }
+  },
+  "viewport_page_without_sheet_keynotes": {
+    "page_number": 4,
+    "sheet_number": "A301",
+    "text": "3 SECTION 1/2\" = 1'-0\" EXTERIOR WALL ASSEMBLY"
+  },
+  "viewport_page_without_sheet_keynotes_with_keynote_like_symbols": {
+    "page_number": 5,
+    "sheet_number": "A401",
+    "text": "4 DETAIL 3/4\" = 1'-0\" GENERAL NOTE 1 KEYNOTE 7"
+  }
+}

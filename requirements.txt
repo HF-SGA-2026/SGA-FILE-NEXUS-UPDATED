@@ -1,0 +1,8 @@
+streamlit>=1.35
+pymupdf>=1.24
+pandas>=2.0
+fastapi>=0.111
+uvicorn[standard]>=0.30
+python-multipart>=0.0.9
+reportlab>=4.0
+pyspellchecker>=0.8

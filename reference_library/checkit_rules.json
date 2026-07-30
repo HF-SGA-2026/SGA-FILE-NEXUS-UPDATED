@@ -1,0 +1,28 @@
+{
+  "name": "Checkit Focused Production Error Checklist",
+  "version": "3.0",
+  "scope": "Check only for the listed document-production errors. The scan verifies detectable presence/absence and simple consistency signals, not design correctness.",
+  "reference_baseline": "reference_library/normal_document_baseline.json",
+  "allowed_errors": [
+    "Missing title block",
+    "Missing or incorrect project information",
+    "Missing or incorrect issue date",
+    "Missing drawing index",
+    "Missing consultant information",
+    "Missing north arrow or scale",
+    "Missing revision block",
+    "Missing professional seal or signature",
+    "Incorrect or duplicate sheet numbers",
+    "Missing, blank, or extra sheets",
+    "Incorrect sheet titles",
+    "Missing view titles or scales",
+    "Missing revision history",
+    "Text overlapping or cut off",
+    "Text too small to read",
+    "Placeholder text not removed",
+    "Spelling errors",
+    "Missing or broken callouts/references",
+    "Unreferenced details",
+    "Views cropped incorrectly or placed off sheet"
+  ]
+}

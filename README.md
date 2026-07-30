@@ -1,29 +1,62 @@
-# SGA-FILE-RENAME
-SGA FILE NEXUS is a browser-based tool that helps you quickly organize and rename large batches of files inside nested folders. It runs entirely on your device, provides a live preview before changes are made, and exports a clean, structured ZIP file. This makes it ideal for managing photos, documents, and bulk project assets efficiently.
+# SGA QC Integrity Check
 
-## Run as a Local Server
+Web-based drawing-set QC for architectural document review. The app accepts PDF and image drawing uploads, extracts sheet data, lets a reviewer correct extracted values, runs deterministic quality checks, and exports review reports.
 
-```bash
-npm start
+## Features
+
+- Document upload for PDF, JPG, JPEG, and PNG files.
+- Sheet extraction with previews, sheet numbers, sheet names, and title-block confidence.
+- Review scope limited to the cover sheet and sheets whose sheet number starts with `A`.
+- Cover checklist, seal check, scale check, sheet index integrity, keynote, viewport, and spell-check reports.
+- Manual correction of sheet numbers, sheet names, and sheet index entries before rerunning QC.
+- Persistent custom dictionary for accepted spell-check terms.
+- CSV/PDF report export.
+
+## Stack
+
+- Backend: FastAPI in `web_app.py`
+- Frontend: static HTML/CSS/JavaScript in `web/static`
+- PDF/image processing: PyMuPDF
+- Reports: CSV and ReportLab PDF
+- Tests: Python `unittest`
+
+## Setup
+
+```powershell
+python -m venv .venv
+.\.venv\Scripts\Activate.ps1
+pip install -r requirements.txt
 ```
 
-Open:
+## Run Locally
 
-```text
-http://localhost:8080
+```powershell
+uvicorn web_app:app --host 127.0.0.1 --port 8006 --reload
 ```
 
-When run this way, SGA FILE NEXUS can send the selected files to the local server so the server creates the ZIP for large exports. HEIC/HEIF conversion still uses the browser path because the local server does not include an image converter.
+Open `http://127.0.0.1:8006`.
 
-## Large Folder Server Mode
+## Test
 
-1. Start the app with `npm start`.
-2. Open `http://localhost:8080`.
-3. Copy the full path to the main folder you want to process.
-4. Paste that path into the server folder path box.
-5. Click **Scan Server Folder**.
-6. Review the summary, settings, duplicate sections, and planned renames.
-7. Click **Export ZIP**.
-8. Click **Download ZIP**.
+```powershell
+python -m unittest discover -s tests
+```
 
-In server folder mode, the server scans the folder from disk, hashes duplicate files on the server, and streams the final ZIP from disk. The original folder is not changed.
+## Project Structure
+
+- `web_app.py` - FastAPI app and run orchestration.
+- `web/static/` - browser UI.
+- `services/pdf_ingestion.py` - upload ingestion, extraction, thumbnails, and caching.
+- `services/cover_sheet_analyzer.py` - cover sheet, set type, owner/consultant, and cover visual checks.
+- `services/sheet_index_extractor.py` - sheet index extraction and index-to-PDF comparison.
+- `services/title_block_extractor.py` - sheet number/name extraction.
+- `services/qc_scope.py` - cover/A-sheet review scope filtering.
+- `services/seal_detector.py` - professional seal detection.
+- `services/keynote_detector.py` - keynote checks.
+- `services/viewport_detector.py` - viewport and scale checks.
+- `services/qc_report_generator.py` - QC result summaries and exports.
+- `tests/` - regression tests for extraction and QC rules.
+
+## GitHub Notes
+
+Generated uploads, run data, cache folders, local databases, logs, virtual environments, and temporary debug images are intentionally ignored by `.gitignore`. Do not commit client PDFs or generated reports unless you deliberately add a sanitized sample fixture.

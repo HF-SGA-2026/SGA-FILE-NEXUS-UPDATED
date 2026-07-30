@@ -1,0 +1,77 @@
+{
+  "source_files": [
+    "2023-011 RIO BANK ELSA PH1.pdf",
+    "2023-013 HINOJOSA LAW FIRM 100% PERMIT SET.pdf",
+    "2024-015 MJM OFFICE - BUILDING - PROGRESS SET 11.25.24 - Copy.pdf",
+    "2025-009 STC BLDG K - 100% COMBINED SIGNED AND SEALED - 03.11.26 - Copy.pdf"
+  ],
+  "baseline_note": "Normal architectural construction documents commonly include title blocks, project information, issue dates, drawing index pages near the front, consultant information, north arrow or scale markers where applicable, revision blocks/history, professional seals/signatures, sheet numbers, view titles/scales, callouts/references, and no placeholder/blank issue sheets.",
+  "pattern_counts": [
+    {
+      "file": "2023-011 RIO BANK ELSA PH1.pdf",
+      "pages": 84,
+      "title_block": 75,
+      "project_info": 58,
+      "issue_date": 75,
+      "drawing_index": 2,
+      "consultants": 58,
+      "north_or_scale": 57,
+      "revision_block": 29,
+      "seal_signature": 70,
+      "sheet_number": 75,
+      "placeholder": 1,
+      "callouts": 23
+    },
+    {
+      "file": "2023-013 HINOJOSA LAW FIRM 100% PERMIT SET.pdf",
+      "pages": 120,
+      "title_block": 106,
+      "project_info": 66,
+      "issue_date": 105,
+      "drawing_index": 3,
+      "consultants": 85,
+      "north_or_scale": 89,
+      "revision_block": 42,
+      "seal_signature": 106,
+      "sheet_number": 106,
+      "placeholder": 1,
+      "callouts": 32
+    },
+    {
+      "file": "2024-015 MJM OFFICE - BUILDING - PROGRESS SET 11.25.24 - Copy.pdf",
+      "pages": 75,
+      "title_block": 75,
+      "project_info": 59,
+      "issue_date": 62,
+      "drawing_index": 3,
+      "consultants": 47,
+      "north_or_scale": 60,
+      "revision_block": 51,
+      "seal_signature": 65,
+      "sheet_number": 69,
+      "placeholder": 0,
+      "callouts": 8
+    },
+    {
+      "file": "2025-009 STC BLDG K - 100% COMBINED SIGNED AND SEALED - 03.11.26 - Copy.pdf",
+      "pages": 49,
+      "title_block": 39,
+      "project_info": 23,
+      "issue_date": 33,
+      "drawing_index": 1,
+      "consultants": 29,
+      "north_or_scale": 28,
+      "revision_block": 17,
+      "seal_signature": 49,
+      "sheet_number": 39,
+      "placeholder": 0,
+      "callouts": 6
+    }
+  ],
+  "coverage_thresholds": {
+    "title_block_min_ratio": 0.75,
+    "sheet_number_min_ratio": 0.75,
+    "issue_date_min_ratio": 0.60,
+    "seal_signature_min_ratio": 0.60
+  }
+}
