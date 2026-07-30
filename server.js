@@ -5,6 +5,7 @@ const path = require("path");
 const crypto = require("crypto");
 const JSZip = require("./website-deploy/vendor/jszip.min.js");
 const { createFolderDiscarderService } = require("./backend/folder-discarder-service");
+const { createBackupDiscarderService } = require("./backend/backup-discarder-service");
 
 const PORT = Number(process.env.PORT || 8080);
 const HOST = process.env.HOST || "127.0.0.1";
@@ -12,6 +13,7 @@ const PUBLIC_DIR = path.join(__dirname, "website-deploy");
 const SCANS = new Map();
 const EXPORTS = new Map();
 const folderDiscarderService = createFolderDiscarderService();
+const backupDiscarderService = createBackupDiscarderService();
 
 const MIME_TYPES = {
   ".html": "text/html; charset=utf-8",
@@ -79,6 +81,10 @@ const server = http.createServer((req, res) => {
   }
 
   if (folderDiscarderService.handle(req, res)) {
+    return;
+  }
+
+  if (backupDiscarderService.handle(req, res)) {
     return;
   }
 

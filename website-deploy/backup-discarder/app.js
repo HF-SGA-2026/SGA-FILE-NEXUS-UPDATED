@@ -68,10 +68,14 @@ const BACKUP_EXTENSION_PATTERNS = [
 const BACKUP_FOLDER_PATTERN = /\b(backup|backups|autosave|auto-save|recovery|recover|temp|temporary|archive)\b/i;
 const VERSION_NAME_PATTERN = /(?:^|[_\s-])(?:v(?:ersion)?\s*\d+|rev(?:ision)?\s*\d+|old|older|previous|final|draft)(?:$|[_\s-]|\d)/i;
 const COPY_NAME_PATTERN = /(?:\s-\scopy\b|[_\s-](?:copy|duplicate|dupe)\b|\(\d+\)\s*$)/i;
-const API_BASE = `${window.location.origin}/api`;
+const API_BASE = `${window.location.origin}/api/backup-discarder`;
 
 const state = {
   mainFolderName: "",
+  mainFolderRelativePath: "",
+  mainFolderScanId: "",
+  mainFolderCandidates: [],
+  mainFolderMatchError: "",
   allFiles: [],
   lastScannedFiles: [],
   fileRecords: [],
@@ -105,7 +109,7 @@ const state = {
   backend: {
     connected: false,
     rootConfigured: false,
-    rootPath: "",
+    serverRootPath: "",
     message: ""
   },
   metrics: {
@@ -207,7 +211,7 @@ function initTooltips() {
   setTooltip(els.dropZone, "Drop a project folder or ZIP file. ZIP files are scanned in the browser without requiring extraction.");
   setTooltip(els.chooseFolderButton, "Choose a ZIP file to scan, or drag a project folder onto the drop area.");
   setTooltip(els.clearButton, "Clear the current folder, selections, Review Bin, and report.");
-  setTooltip(els.serverStatusButton, "Choose the same project folder you scanned so selected files can move to Review_Bin safely.");
+  setTooltip(els.serverStatusButton, "Choose a broad trusted Local Server root. Each scanned Main Folder must be inside it.");
   setTooltip(els.selectAllButton, "Select all detected parent folders.");
   setTooltip(els.deselectAllButton, "Clear all selected parent folders.");
   setTooltip(els.selectFlaggedButton, "Select all deletable files in the current review filter.");
@@ -529,6 +533,7 @@ async function loadFileList(files) {
 
   const mainFolder = commonMainFolder(normalized.map(item => item.path));
   state.mainFolderName = mainFolder || "Selected Folder";
+  state.mainFolderRelativePath = "";
   state.allFiles = normalized;
   state.metrics = { total: normalized.length, completed: 0, startTime: performance.now(), mode: "scanning" };
 
@@ -549,6 +554,7 @@ async function loadFileList(files) {
   renderParentList();
   renderReviewFilterOptions();
   await updateFlaggedRows();
+  await resolveBackendMainFolder(true);
 
   els.folderSummary.textContent = scanSummaryText();
   setStatus("Scan complete");
@@ -1778,12 +1784,20 @@ async function discardSelectedFiles() {
   addLog(`Moving ${selectedRows.length} selected files into Review Bin...`);
   updateMetrics();
 
-  const movedResults = {
-    results: selectedRows.map(row => ({
-      ok: true,
-      path: row.originalPath
-    }))
-  };
+  let movedResults;
+  try {
+    const mainFolder = await backendMainFolderPayload();
+    movedResults = await apiRequest("/move-to-review-bin", {
+      ...mainFolder,
+      files: selectedRows.map(row => row.originalPath)
+    });
+  } catch (error) {
+    state.processing = false;
+    setStatus("Move failed");
+    addLog(`Review Bin move failed: ${error.message}`, "error");
+    updateControls();
+    return;
+  }
 
   const resultMap = new Map((movedResults.results || []).map(result => [normalizePath(result.path), result]));
   const batchIds = [];
@@ -1895,11 +1909,34 @@ async function restoreReviewBinFile(rowId) {
 
 async function recoverRowsFromBackend(rows) {
   if (!rows.length) return [];
+  if (!state.backend.connected || !state.backend.rootConfigured) {
+    addLog("Local server not connected. Start the server to recover files from Review Bin.", "warn");
+    return [];
+  }
 
-  //Review Bin is website-only now.
-  //Recover simply returns the selected area so they can
-  //be moved back into Review Files by the existing UI logic.
-  return rows; 
+  try {
+    const mainFolder = await backendMainFolderPayload();
+    const data = await apiRequest("/recover-from-review-bin", {
+      ...mainFolder,
+      files: rows.map(row => row.originalPath)
+    });
+    const resultMap = new Map((data.results || []).map(result => [normalizePath(result.path), result]));
+    const recovered = [];
+    for (const row of rows) {
+      const result = resultMap.get(normalizePath(row.originalPath));
+      if (result?.ok) {
+        recovered.push(row);
+      } else {
+        const message = result?.error || "Local server recovery failed";
+        state.failures.push({ path: row.originalPath, message });
+        addLog(`Could not recover ${row.fileName}: ${message}`, "error");
+      }
+    }
+    return recovered;
+  } catch (error) {
+    addLog(`Review Bin recovery failed: ${error.message}`, "error");
+    return [];
+  }
 }
 
 async function permanentlyDeleteReviewBin() {
@@ -1952,7 +1989,9 @@ async function recycleRowsFromBackend(rows) {
   }
 
   try {
+    const mainFolder = await backendMainFolderPayload();
     const data = await apiRequest("/delete-permanently", {
+      ...mainFolder,
       files: rows.map(row => row.originalPath)
     });
     const resultMap = new Map((data.results || []).map(result => [normalizePath(result.path), result]));
@@ -2629,12 +2668,12 @@ async function checkBackendStatus() {
     const response = await fetch(`${API_BASE}/status`, { cache: "no-store" });
     if (!response.ok) throw new Error(`HTTP ${response.status}`);
     const data = await response.json();
-    state.backend.rootConfigured = Boolean(data.rootPath);
-    state.backend.rootPath = data.rootPath || "";
-    setBackendStatus(true, data.rootPath ? `Local server connected: ${data.rootPath}` : "Browser security prevents automatic folder path detection. Click Choose Local Folder and select the same folder you scanned.");
+    state.backend.rootConfigured = Boolean(data.serverRootPath || data.rootPath);
+    state.backend.serverRootPath = data.serverRootPath || data.rootPath || "";
+    setBackendStatus(true, state.backend.serverRootPath ? `Local server connected: ${state.backend.serverRootPath}` : "Click Choose Local Folder to configure a trusted server root.");
   } catch (error) {
     state.backend.rootConfigured = false;
-    state.backend.rootPath = "";
+    state.backend.serverRootPath = "";
     setBackendStatus(false, "Local server not connected. Start the server to move files safely.");
   }
   updateControls();
@@ -2665,12 +2704,14 @@ async function configureBackendRoot() {
     setBackendStatus(true, "Opening folder picker...");
     const data = await apiRequest("/choose-folder");
     state.backend.rootConfigured = true;
-    state.backend.rootPath = data.rootPath || "";
-    setBackendStatus(true, `Local server connected: ${state.backend.rootPath}`);
-    addLog(`Local backend root set to ${state.backend.rootPath}.`);
+    state.backend.serverRootPath = data.serverRootPath || data.rootPath || "";
+    clearMainFolderMatch();
+    setBackendStatus(true, `Local server connected: ${state.backend.serverRootPath}`);
+    addLog(`Local backend root set to ${state.backend.serverRootPath}.`);
+    await resolveBackendMainFolder(true);
   } catch (error) {
     state.backend.rootConfigured = false;
-    setBackendStatus(true, "Browser security prevents automatic folder path detection. Click Choose Local Folder and select the same folder you scanned.");
+    setBackendStatus(true, "Click Choose Local Folder to configure a broad trusted server root.");
     addLog(`Folder picker was not completed: ${error.message}`, "warn");
   }
   updateControls();
@@ -2678,8 +2719,8 @@ async function configureBackendRoot() {
 
 function maybeSuggestLocalFolderPicker() {
   if (!isLocalHttpApp() || !state.backend.connected || state.backend.rootConfigured) return;
-  addLog("Browser security prevents automatic folder path detection. Click Choose Local Folder and select the same folder you scanned.", "warn");
-  setBackendStatus(true, "Browser security prevents automatic folder path detection. Click Choose Local Folder and select the same folder you scanned.");
+  addLog("Click Choose Local Folder to configure a broad trusted server root before moving files.", "warn");
+  setBackendStatus(true, "Click Choose Local Folder to configure a broad trusted server root.");
 }
 
 async function apiRequest(path, payload = {}) {
@@ -2693,6 +2734,169 @@ async function apiRequest(path, payload = {}) {
     throw new Error(data.error || `HTTP ${response.status}`);
   }
   return data;
+}
+
+async function backendMainFolderPayload() {
+  if (!state.mainFolderScanId || !state.mainFolderRelativePath) {
+    const matched = await resolveBackendMainFolder(true);
+    if (!matched) {
+      throw new Error(state.mainFolderMatchError || "The scanned Main Folder has not been matched inside the Local Server root.");
+    }
+  }
+  return { scanId: state.mainFolderScanId };
+}
+
+async function resolveBackendMainFolder(promptForMultiple = false) {
+  if (!state.allFiles.length || !state.backend.connected || !state.backend.rootConfigured) return false;
+  if (state.mainFolderScanId && state.mainFolderRelativePath) return true;
+  if (state.mainFolderScanId && state.mainFolderCandidates.length) {
+    return promptForMultiple ? await selectMatchedMainFolderCandidate() : false;
+  }
+  if (state.mainFolderScanId && state.mainFolderMatchError) return false;
+
+  try {
+    setStatus("Locating Main Folder...");
+    const data = await apiRequest("/resolve-main-folder", mainFolderScanDescriptor());
+    state.mainFolderScanId = data.scanId || "";
+    state.mainFolderCandidates = Array.isArray(data.candidates) ? data.candidates : [];
+    state.mainFolderRelativePath = data.mainFolderRelativePath || "";
+    state.mainFolderMatchError = "";
+
+    if (data.matchStatus === "matched" && state.mainFolderRelativePath) {
+      addLog(`Matched Main Folder inside the Local Server root: ${displayRelativeServerPath(state.mainFolderRelativePath)}.`);
+      return true;
+    }
+    if (data.matchStatus === "none") {
+      state.mainFolderMatchError = data.error || "The selected folder could not be located inside the connected Local Server root. Confirm that the folder is stored under the connected root.";
+      addLog(state.mainFolderMatchError, "error");
+      return false;
+    }
+    if (data.matchStatus === "multiple" && state.mainFolderCandidates.length) {
+      if (!promptForMultiple) return false;
+      return await selectMatchedMainFolderCandidate();
+    }
+    state.mainFolderMatchError = "The Local Server returned an invalid Main Folder matching result.";
+    addLog(state.mainFolderMatchError, "error");
+    return false;
+  } catch (error) {
+    state.mainFolderMatchError = `Main Folder matching failed: ${error.message}`;
+    addLog(state.mainFolderMatchError, "error");
+    return false;
+  }
+}
+
+function mainFolderScanDescriptor() {
+  return {
+    mainFolderName: state.mainFolderName,
+    scannedFiles: state.allFiles.map(item => ({
+      relativePath: item.path,
+      size: Number(item.file?.size ?? item.size ?? 0)
+    }))
+  };
+}
+
+async function selectMatchedMainFolderCandidate() {
+  const selected = await showMainFolderCandidatePrompt(state.mainFolderCandidates);
+  if (!selected) {
+    state.mainFolderMatchError = "Choose one of the matched Main Folder locations before moving files.";
+    return false;
+  }
+  try {
+    const data = await apiRequest("/select-main-folder", {
+      scanId: state.mainFolderScanId,
+      mainFolderRelativePath: selected
+    });
+    state.mainFolderRelativePath = data.mainFolderRelativePath || "";
+    state.mainFolderCandidates = [];
+    state.mainFolderMatchError = "";
+    addLog(`Selected Main Folder inside the Local Server root: ${displayRelativeServerPath(state.mainFolderRelativePath)}.`);
+    return Boolean(state.mainFolderRelativePath);
+  } catch (error) {
+    state.mainFolderMatchError = `Main Folder selection failed: ${error.message}`;
+    addLog(state.mainFolderMatchError, "error");
+    return false;
+  }
+}
+
+function showMainFolderCandidatePrompt(candidates) {
+  return new Promise(resolve => {
+    const backdrop = document.createElement("div");
+    backdrop.className = "modal-backdrop";
+    backdrop.setAttribute("role", "presentation");
+
+    const modal = document.createElement("section");
+    modal.className = "panel confirm-modal";
+    modal.setAttribute("role", "dialog");
+    modal.setAttribute("aria-modal", "true");
+    modal.setAttribute("aria-labelledby", "mainFolderCandidateTitle");
+
+    const heading = document.createElement("div");
+    heading.className = "section-heading";
+    const headingCopy = document.createElement("div");
+    const title = document.createElement("h2");
+    title.id = "mainFolderCandidateTitle";
+    title.textContent = "Choose the matching Main Folder";
+    const description = document.createElement("p");
+    description.textContent = "More than one folder inside the connected Local Server root matches this scan. Select the correct relative location.";
+    headingCopy.append(title, description);
+    heading.append(headingCopy);
+
+    const select = document.createElement("select");
+    select.setAttribute("aria-label", "Matching Main Folder location");
+    select.size = Math.min(Math.max(candidates.length, 2), 8);
+    select.style.width = "100%";
+    select.style.margin = "16px 0";
+    for (const candidate of candidates) {
+      const option = document.createElement("option");
+      option.value = candidate;
+      option.textContent = displayRelativeServerPath(candidate);
+      select.append(option);
+    }
+    select.selectedIndex = 0;
+
+    const actions = document.createElement("div");
+    actions.className = "button-row modal-actions";
+    const cancelButton = document.createElement("button");
+    cancelButton.className = "button secondary";
+    cancelButton.type = "button";
+    cancelButton.textContent = "Cancel";
+    const selectButton = document.createElement("button");
+    selectButton.className = "button primary";
+    selectButton.type = "button";
+    selectButton.textContent = "Use Selected Folder";
+    actions.append(cancelButton, selectButton);
+    modal.append(heading, select, actions);
+    backdrop.append(modal);
+    document.body.append(backdrop);
+
+    const finish = value => {
+      document.removeEventListener("keydown", onKeyDown);
+      backdrop.remove();
+      resolve(value);
+    };
+    const onKeyDown = event => {
+      if (event.key === "Escape") finish("");
+      if (event.key === "Enter") finish(select.value);
+    };
+    cancelButton.addEventListener("click", () => finish(""));
+    selectButton.addEventListener("click", () => finish(select.value));
+    backdrop.addEventListener("click", event => {
+      if (event.target === backdrop) finish("");
+    });
+    document.addEventListener("keydown", onKeyDown);
+    select.focus();
+  });
+}
+
+function displayRelativeServerPath(value) {
+  return String(value || "").replaceAll("/", "\\");
+}
+
+function clearMainFolderMatch() {
+  state.mainFolderRelativePath = "";
+  state.mainFolderScanId = "";
+  state.mainFolderCandidates = [];
+  state.mainFolderMatchError = "";
 }
 
 function updateProgressValue(element, value) {
@@ -2733,6 +2937,7 @@ function clearAll() {
 
 function clearWorkingState() {
   state.mainFolderName = "";
+  clearMainFolderMatch();
   state.allFiles = [];
   state.fileRecords = [];
   state.parentFolders = new Map();
