@@ -577,6 +577,10 @@ async function loadFileList(files) {
 }
 
 function addFileRecord(item) {
+  if (isReviewBinPath(item.path)) {
+    return;
+  }
+
   const parts = item.path.split("/").filter(Boolean);
   if (!parts.length) return;
 
@@ -1787,6 +1791,18 @@ async function discardSelectedFiles() {
   let movedResults;
   try {
     const mainFolder = await backendMainFolderPayload();
+    
+    console.log(
+      "Selected rows before move:",
+      selectedRows.map(row => ({
+        originalPath: row.originalPath,
+        relativePath: row.relativePath,
+        path: row.path,
+        name: row.name
+      }))
+    );
+    
+    
     movedResults = await apiRequest("/move-to-review-bin", {
       ...mainFolder,
       files: selectedRows.map(row => row.originalPath)
@@ -3308,6 +3324,19 @@ function isSystemFile(path) {
   const name = path.split("/").pop().toLowerCase();
   return SYSTEM_FILE_NAMES.has(name) || name.startsWith("._");
 }
+
+function isReviewBinPath(filePath) {
+  const normalized = String(filePath || "")
+    .replace(/\\/g, "/")
+    .replace(/^\/+|\/+$/g, "")
+    .toLowerCase();
+
+  return normalized
+    .split("/")
+    .includes("review_bin");
+}
+
+
 
 function getExtension(fileName) {
   const last = fileName.split(".").pop();
