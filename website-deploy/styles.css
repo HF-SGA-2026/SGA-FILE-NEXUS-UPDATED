@@ -425,6 +425,23 @@ body[data-tool="sga"] .tool-workspace {
   grid-template-columns: repeat(2, minmax(280px, 420px));
 }
 
+.construction-check-workspace,
+.construction-render-placeholder {
+  display: none;
+}
+
+body[data-tool="construction"][data-workflow="photos"] .construction-check-workspace,
+body[data-tool="construction"][data-workflow="pdfs"] .construction-render-placeholder {
+  display: block;
+}
+
+.qc-integrity-frame {
+  display: block;
+  width: 100%;
+  min-height: 1200px;
+  border: 0;
+}
+
 .settings-icon-button {
   appearance: none;
   position: absolute;
@@ -1600,6 +1617,10 @@ tr:last-child td {
 
   .metrics {
     grid-template-columns: 1fr;
+  }
+
+  .qc-integrity-frame {
+    min-height: 1000px;
   }
 }
 

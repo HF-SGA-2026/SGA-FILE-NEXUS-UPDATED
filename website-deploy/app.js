@@ -16,6 +16,11 @@ const DEMO_USERS = new Map([
   ["el@samgarciaarchitect.com", { password: "Gig'Em" }]
 ]);
 
+const TOOL_PARENTS = new Map([
+  ["firm", "home"],
+  ["construction", "firm"]
+]);
+
 const state = {
   mainFolderName: "",
   rawFiles: [],
@@ -266,7 +271,7 @@ function bindEvents() {
   });
 
   els.clearButton.addEventListener("click", clearAll);
-  els.homeButton.addEventListener("click", () => setToolMode("home"));
+  els.homeButton.addEventListener("click", navigateToParentTool);
   els.folderDiscarderButton.addEventListener("click", () => setToolMode("folder-discarder"));
   els.blankDuplicateDiscarderButton.addEventListener("click", () => setToolMode("blank-duplicate"));
   els.firmToolsButton.addEventListener("click", () => setToolMode("firm"));
@@ -497,6 +502,10 @@ function setToolMode(mode) {
   updateWorkflowMode();
 }
 
+function navigateToParentTool() {
+  setToolMode(TOOL_PARENTS.get(state.activeTool) || "home");
+}
+
 function openSettings() {
   els.settingsOverlay.classList.add("open");
   els.settingsOverlay.setAttribute("aria-hidden", "false");
@@ -528,7 +537,7 @@ function updateToolMode() {
     els.headerCopy.textContent = "";
   } else if (state.activeTool === "construction") {
     els.workflowSubtitle.textContent = "Construction Document Tools";
-    els.headerCopy.textContent = "Construction document cleanup and review tools are coming soon.";
+    els.headerCopy.textContent = "Choose a construction document review or rendering tool.";
   }
 }
 
@@ -548,7 +557,9 @@ function updateWorkflowMode() {
     els.photosModeButton.title = "Use the construction document check workflow.";
     els.pdfsModeButton.title = "Use the construction document render workflow.";
     els.workflowSubtitle.textContent = isPhotos ? "SGA Integrity Check" : "SGA Render Studio";
-    els.headerCopy.textContent = "Construction document cleanup and review tools are coming soon.";
+    els.headerCopy.textContent = isPhotos
+      ? "Choose a construction document quality-control tool."
+      : "Construction document rendering tools are coming soon.";
   } else {
     els.photosModeButton.textContent = "Photos";
     els.pdfsModeButton.textContent = "PDFs";

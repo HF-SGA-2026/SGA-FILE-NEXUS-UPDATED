@@ -4,6 +4,6 @@
   "private": true,
   "description": "Local server for the SGA FILE NEXUS website.",
   "scripts": {
-    "start": "node server.js"
+    "start": "powershell -NoProfile -ExecutionPolicy Bypass -File .\\scripts\\start.ps1"
   }
 }
