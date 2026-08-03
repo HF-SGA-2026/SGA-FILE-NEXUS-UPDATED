@@ -18,7 +18,7 @@ VIEW_TITLE_RE = re.compile(
 VIEW_LABEL_RE = re.compile(
     r"\b(?P<label>"
     r"(?:ENLARGED\s+)?(?:FLOOR|ROOF|SITE|UTILITY|LIGHTING|POWER|PLUMBING|MECHANICAL|ELECTRICAL|"
-    r"LANDSCAPE|DEMO(?:LITION)?|DRAINAGE(?:\s*&\s*GRADING)?|DIMENSION(?:AL)?\s+CONTROL)\s+PLAN|"
+    r"LANDSCAPE|FOUNDATION|FRAMING|DEMO(?:LITION)?|DRAINAGE(?:\s*&\s*GRADING)?|DIMENSION(?:AL)?\s+CONTROL)\s+PLAN|"
     r"REFLECTED\s+CEILING\s+PLAN|RCP|"
     r"(?:[A-Z][A-Z0-9/&'.-]*\s+){1,5}DETAIL|"
     r"(?:(?:BUILDING|WALL|INTERIOR|EXTERIOR|INT\.?|ENLARGED)\s+)(?:SECTION|ELEVATION|DETAIL)|"
@@ -147,7 +147,7 @@ def detect_missing_scales_for_page(page: dict) -> list[dict]:
                 or _is_sheet_index_context(lines, index)
             ):
                 continue
-            detail_number = _nearby_detail_number(lines, index, title_match.start())
+            detail_number = _nearby_detail_number(lines, index, title_match.start(), title_match.end())
             if not detail_number:
                 continue
             normalized_detail = re.sub(r"[^A-Z0-9.]", "", str(detail_number).upper())
@@ -183,6 +183,13 @@ def detect_missing_scales_for_page(page: dict) -> list[dict]:
 def _is_scale_optional_sheet(page: dict) -> bool:
     text = str(page.get("text") or "").upper()
     sheet_name = str(page.get("sheet_name") or "").upper()
+    page_label = str(page.get("page_label_text") or "").upper()
+    if (
+        re.search(r"\b(?:COVER|INDEX)\s+SHEET\b|\bSHEET\s+INDEX\b|\bINDEX\s+OF\s+SHEETS\b", sheet_name)
+        or re.search(r"\b(?:COVER|INDEX)\s+SHEET\b|\bSHEET\s+INDEX\b", page_label)
+        or re.search(r"\bSHEET\s+INDEX\b|\bINDEX\s+OF\s+SHEETS\b", text)
+    ):
+        return True
     if re.search(r"\b(?:DOOR|WINDOW|ROOM\s+FINISH)\s+SCHEDULE\b|\bGLAZING\s+TYPES?\b|\bCEILING\s+TILE\s+TYPES?\b", text):
         return True
     if (
@@ -204,16 +211,32 @@ def _view_text_lines(text: str) -> list[str]:
     return [re.sub(r"\s+", " ", line).strip() for line in text.splitlines() if line.strip()]
 
 
-def _nearby_detail_number(lines: list[str], index: int, title_start: int) -> str:
+def _nearby_detail_number(lines: list[str], index: int, title_start: int, title_end: int) -> str:
     same_line_prefix = lines[index][:title_start].strip(" .:-")
     same_line_match = re.search(r"(?:^|\s)([A-Z]?\d{1,3}(?:\.\d+)?[A-Z]?)$", same_line_prefix, re.IGNORECASE)
     if same_line_match:
         return same_line_match.group(1)
+    same_line_suffix = lines[index][title_end:].strip(" .:-")
+    suffix_candidate = _detail_number_from_text_fragment(same_line_suffix)
+    if suffix_candidate:
+        return suffix_candidate
     for line in reversed(lines[max(0, index - 2) : index]):
         candidate = line.strip(" .:-")
         if DETAIL_NUMBER_RE.fullmatch(candidate):
             return candidate
+    for line in lines[index + 1 : min(len(lines), index + 4)]:
+        candidate = _detail_number_from_text_fragment(line)
+        if candidate:
+            return candidate
     return ""
+
+
+def _detail_number_from_text_fragment(value: str) -> str:
+    fragment = VIEW_SCALE_RE.sub(" ", _normalize_scale_glyphs(value)).strip(" .:-")
+    if DETAIL_NUMBER_RE.fullmatch(fragment):
+        return fragment
+    match = re.search(r"(?:^|\s)([A-Z]?\d{1,3}(?:\.\d+)?[A-Z]?)(?:\s|$)", fragment, re.IGNORECASE)
+    return match.group(1) if match else ""
 
 
 def _is_reference_to_plan(line: str, label_start: int, label_end: int) -> bool:

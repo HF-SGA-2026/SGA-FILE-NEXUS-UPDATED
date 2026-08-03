@@ -1,19 +1,19 @@
 :root {
-  --bg: #ffffff;
+  --bg: #fbfaf8;
   --panel: #ffffff;
-  --panel-soft: #fafafa;
-  --text: #050505;
-  --muted: #5e5e5e;
-  --line: #e2e2e2;
-  --line-strong: #9b9b9b;
-  --accent: #050505;
-  --accent-dark: #333333;
-  --sga-red: #ea3d31;
-  --sga-red-dark: #c83228;
-  --success: #111111;
+  --panel-soft: #f7f5f2;
+  --text: #151110;
+  --muted: #706b66;
+  --line: #e6e1dc;
+  --line-strong: #b8ada6;
+  --accent: #151110;
+  --accent-dark: #332d2a;
+  --sga-red: #9f1f23;
+  --sga-red-dark: #7f171a;
+  --success: #151110;
   --warn: var(--sga-red-dark);
   --error: var(--sga-red);
-  --shadow: none;
+  --shadow: 0 18px 40px rgba(38, 27, 22, 0.04);
   --header-tool-width: 238px;
 }
 
@@ -56,12 +56,12 @@ p {
 }
 
 h1 {
-  font-size: clamp(2rem, 4.2vw, 3.1rem);
-  line-height: 1.08;
-  letter-spacing: 0.26em;
-  font-family: Futura, "Avenir Next", Avenir, Montserrat, "Helvetica Neue", Arial, sans-serif;
-  font-weight: 300;
-  text-transform: uppercase;
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 4.25rem;
+  font-weight: 400;
+  line-height: 0.98;
+  letter-spacing: 0;
+  text-transform: none;
   overflow-wrap: anywhere;
 }
 
@@ -104,8 +104,16 @@ h1 {
 
 h2 {
   font-size: 1.02rem;
-  font-weight: 500;
-  letter-spacing: 0.04em;
+  color: #241b19;
+  font-weight: 650;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+h3 {
+  color: #241b19;
+  font-weight: 650;
+  letter-spacing: 0.06em;
 }
 
 .login-screen {
@@ -131,8 +139,8 @@ h2 {
 }
 
 .login-card h1 {
-  font-size: clamp(2rem, 6vw, 3.15rem);
-  letter-spacing: 0.18em;
+  font-size: clamp(3rem, 8vw, 4.25rem);
+  letter-spacing: 0;
 }
 
 .login-copy {
@@ -243,6 +251,21 @@ h2 {
   color: var(--sga-red);
 }
 
+#backToLoginButton {
+  width: 100%;
+  min-height: 42px;
+  border: 1px solid var(--sga-red);
+  background: var(--sga-red);
+  color: #fff;
+  padding: 0 15px;
+}
+
+#backToLoginButton:hover {
+  border-color: var(--sga-red-dark);
+  background: var(--sga-red-dark);
+  color: #fff;
+}
+
 .login-error {
   min-height: 22px;
   margin-top: 12px;
@@ -286,16 +309,37 @@ body[data-tool="home"] .header-tools {
 body[data-tool="firm"] .mode-switch,
 body[data-tool="folder-discarder"] .mode-switch,
 body[data-tool="blank-duplicate"] .mode-switch,
+body[data-tool="sga"] .mode-switch,
+body[data-tool="prompt-builder"] .mode-switch,
+body[data-tool="mep-analysis"] .mode-switch,
 body[data-tool="firm"] .library-status,
 body[data-tool="folder-discarder"] .library-status,
 body[data-tool="blank-duplicate"] .library-status,
-body[data-tool="construction"] .library-status {
+body[data-tool="construction"] .library-status,
+body[data-tool="prompt-builder"] .library-status,
+body[data-tool="mep-analysis"] .library-status {
   display: none;
 }
 
 
 .home-button {
   width: var(--header-tool-width);
+}
+
+#homeButton,
+#quickLogoutButton,
+#logoutButton {
+  border-color: var(--sga-red);
+  background: var(--sga-red);
+  color: #fff;
+}
+
+#homeButton:hover:not(:disabled),
+#quickLogoutButton:hover:not(:disabled),
+#logoutButton:hover:not(:disabled) {
+  border-color: var(--sga-red-dark);
+  background: var(--sga-red-dark);
+  color: #fff;
 }
 
 .header-copy {
@@ -386,6 +430,7 @@ body[data-tool="construction"] #pdfsModeButton {
 .folder-discarder-workspace,
 .blank-duplicate-workspace,
 .construction-workspace,
+.coming-soon-workspace,
 .tool-workspace {
   display: none;
 }
@@ -395,6 +440,8 @@ body[data-tool="firm"] .firm-workspace,
 body[data-tool="folder-discarder"] .folder-discarder-workspace,
 body[data-tool="blank-duplicate"] .blank-duplicate-workspace,
 body[data-tool="construction"] .construction-workspace,
+body[data-tool="prompt-builder"] .coming-soon-workspace,
+body[data-tool="mep-analysis"] .coming-soon-workspace,
 body[data-tool="sga"] .tool-workspace {
   display: block;
 }
@@ -908,6 +955,8 @@ body[data-workflow="pdfs"] .tutorial-workspace {
   justify-content: space-between;
   gap: 14px;
   margin-bottom: 14px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid rgba(159, 31, 35, 0.22);
 }
 
 .muted,
@@ -1580,9 +1629,9 @@ tr:last-child td {
   }
 
   h1 {
-    font-size: 2.18rem;
+    font-size: 2.7rem;
     line-height: 1.12;
-    letter-spacing: 0.14em;
+    letter-spacing: 0;
   }
 
   .brand-title {

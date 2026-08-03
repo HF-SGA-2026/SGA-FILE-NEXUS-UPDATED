@@ -2484,6 +2484,29 @@ class ViewportLogicTests(unittest.TestCase):
         self.assertEqual(findings[0]["status"], "Pass")
         self.assertEqual(findings[0]["scale"], "1\" = 10'")
 
+    def test_missing_scale_check_recognizes_title_bubble_number_after_label(self) -> None:
+        page = {
+            "page_number": 22,
+            "sheet_number": "S2.1",
+            "text": "FOUNDATION PLAN 1\n1/4\" = 1'-0\"",
+        }
+        findings = detect_missing_scales_for_page(page)
+        self.assertEqual(findings[0]["detail_number"], "1")
+        self.assertEqual(findings[0]["view_label"], "FOUNDATION PLAN")
+        self.assertEqual(findings[0]["status"], "Pass")
+        self.assertEqual(findings[0]["scale"], "1/4\" = 1'-0\"")
+
+    def test_missing_scale_check_recognizes_title_bubble_number_after_scale(self) -> None:
+        page = {
+            "page_number": 22,
+            "sheet_number": "S2.1",
+            "text": "FOUNDATION PLAN\n1/4\"\n= 1'-0\"\n1",
+        }
+        findings = detect_missing_scales_for_page(page)
+        self.assertEqual(findings[0]["detail_number"], "1")
+        self.assertEqual(findings[0]["status"], "Pass")
+        self.assertEqual(findings[0]["scale"], "1/4\" = 1'-0\"")
+
     def test_missing_scale_check_uses_visual_site_plan_scale_marker(self) -> None:
         page = {
             "page_number": 7,
@@ -2675,6 +2698,24 @@ class ViewportLogicTests(unittest.TestCase):
             "text": (
                 "INDEX OF SHEETS PLUM\nSheet Number\nSheet Name\n"
                 "P3.01\nPLUMBING LEGEND\nP1.03\nPLUMBING ROOF PLAN\n"
+            ),
+        }
+        self.assertEqual(detect_missing_scales_for_page(page), [])
+
+    def test_missing_scale_check_skips_cover_index_sheet_rows(self) -> None:
+        page = {
+            "page_number": 1,
+            "sheet_number": "A001",
+            "sheet_name": "INDEX SHEET",
+            "page_label_text": "A001 - INDEX SHEET",
+            "text": (
+                "SHEET INDEX\n"
+                "MECHANICAL\n"
+                "M100\nMECHANICAL FLOOR PLAN\n"
+                "ELECTRICAL\n"
+                "E100\nELECTRICAL FLOOR PLAN\n"
+                "PLUMBING\n"
+                "P100\nPLUMBING FLOOR PLAN\n"
             ),
         }
         self.assertEqual(detect_missing_scales_for_page(page), [])

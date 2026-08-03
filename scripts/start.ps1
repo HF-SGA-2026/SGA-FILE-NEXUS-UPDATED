@@ -73,6 +73,19 @@ function Find-Python {
       return $pythonPath
     }
   }
+
+  $documentsRoot = Split-Path -Parent (Split-Path -Parent $repositoryRoot)
+  $fallbackCandidates = @(
+    (Join-Path $documentsRoot "QC\.venv\Scripts\python.exe"),
+    (Join-Path $env:USERPROFILE "OneDrive\Documents\QC\.venv\Scripts\python.exe"),
+    (Join-Path $env:USERPROFILE ".cache\codex-runtimes\codex-primary-runtime\dependencies\python\python.exe")
+  )
+  foreach ($candidate in $fallbackCandidates) {
+    if (Test-PythonExecutable $candidate) {
+      return $candidate
+    }
+  }
+
   return $null
 }
 
@@ -87,6 +100,36 @@ function Invoke-RequiredCommand {
   & $FilePath @ArgumentList
   if ($LASTEXITCODE -ne 0) {
     throw "Command failed with exit code $LASTEXITCODE`: $DisplayCommand"
+  }
+}
+
+function Test-PythonExecutable {
+  param([string]$FilePath)
+
+  if (-not (Test-Path -LiteralPath $FilePath -PathType Leaf)) {
+    return $false
+  }
+
+  try {
+    $probe = New-Object System.Diagnostics.Process
+    $probe.StartInfo = New-Object System.Diagnostics.ProcessStartInfo
+    $probe.StartInfo.FileName = $FilePath
+    $probe.StartInfo.Arguments = "--version"
+    $probe.StartInfo.UseShellExecute = $false
+    $probe.StartInfo.CreateNoWindow = $true
+    $probe.StartInfo.RedirectStandardOutput = $true
+    $probe.StartInfo.RedirectStandardError = $true
+    if (-not $probe.Start()) {
+      return $false
+    }
+    if (-not $probe.WaitForExit(10000)) {
+      $probe.Kill()
+      return $false
+    }
+    $versionOutput = ($probe.StandardOutput.ReadToEnd() + $probe.StandardError.ReadToEnd()).Trim()
+    return $probe.ExitCode -eq 0 -and $versionOutput -match '^Python\s+\d+'
+  } catch {
+    return $false
   }
 }
 
@@ -117,17 +160,18 @@ function Install-Python {
 function Ensure-VirtualEnvironment {
   param([string]$SystemPython)
 
-  if (Test-Path -LiteralPath $venvPython -PathType Leaf) {
+  if (Test-PythonExecutable $venvPython) {
     Write-Step "Using existing virtual environment at $venvDirectory"
     return
   }
 
   if (Test-Path -LiteralPath $venvDirectory) {
-    throw "The existing .venv folder is incomplete because Scripts\python.exe is missing. Remove or repair '$venvDirectory', then run npm start again."
+    Write-Step "Existing virtual environment is stale or broken. Recreating $venvDirectory"
+    Remove-Item -LiteralPath $venvDirectory -Recurse -Force
   }
 
   Invoke-RequiredCommand -FilePath $SystemPython -ArgumentList @("-m", "venv", $venvDirectory) -DisplayCommand "python -m venv .venv"
-  if (-not (Test-Path -LiteralPath $venvPython -PathType Leaf)) {
+  if (-not (Test-PythonExecutable $venvPython)) {
     throw "Virtual environment creation completed without producing '$venvPython'."
   }
 }

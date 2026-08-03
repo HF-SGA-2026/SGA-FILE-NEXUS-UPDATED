@@ -45,7 +45,7 @@ STATIC_DIR = APP_DIR / "web" / "static"
 PDF_UPLOAD_EXTENSIONS = {".pdf"}
 IMAGE_UPLOAD_EXTENSIONS = {".jpg", ".jpeg", ".png"}
 ALLOWED_UPLOAD_EXTENSIONS = PDF_UPLOAD_EXTENSIONS | IMAGE_UPLOAD_EXTENSIONS
-QC_RULES_VERSION = 26
+QC_RULES_VERSION = 27
 
 app = FastAPI(title="Quality Assurance Check", version="0.1.0")
 app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")

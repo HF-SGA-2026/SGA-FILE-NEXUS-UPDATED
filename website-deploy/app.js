@@ -18,8 +18,21 @@ const DEMO_USERS = new Map([
 
 const TOOL_PARENTS = new Map([
   ["firm", "home"],
-  ["construction", "firm"]
+  ["construction", "firm"],
+  ["prompt-builder", "firm"],
+  ["mep-analysis", "firm"]
 ]);
+
+const COMING_SOON_TOOLS = {
+  "prompt-builder": {
+    title: "SGA Prompt Builder",
+    copy: "SGA Prompt Builder is coming soon."
+  },
+  "mep-analysis": {
+    title: "SGA MEP Analysis",
+    copy: "SGA MEP Analysis is coming soon."
+  }
+};
 
 const state = {
   mainFolderName: "",
@@ -98,7 +111,10 @@ const els = {
   blankDuplicateDiscarderButton: document.getElementById("blankDuplicateDiscarderButton"),
   firmToolsButton: document.getElementById("firmToolsButton"),
   constructionToolsButton: document.getElementById("constructionToolsButton"),
+  promptBuilderButton: document.getElementById("promptBuilderButton"),
+  mepAnalysisButton: document.getElementById("mepAnalysisButton"),
   renamingSystemsButton: document.getElementById("renamingSystemsButton"),
+  comingSoonTitle: document.getElementById("comingSoonTitle"),
   settingsButton: document.getElementById("settingsButton"),
   settingsOverlay: document.getElementById("settingsOverlay"),
   settingsCloseButton: document.getElementById("settingsCloseButton"),
@@ -276,6 +292,8 @@ function bindEvents() {
   els.blankDuplicateDiscarderButton.addEventListener("click", () => setToolMode("blank-duplicate"));
   els.firmToolsButton.addEventListener("click", () => setToolMode("firm"));
   els.constructionToolsButton.addEventListener("click", () => setToolMode("construction"));
+  els.promptBuilderButton.addEventListener("click", () => setToolMode("prompt-builder"));
+  els.mepAnalysisButton.addEventListener("click", () => setToolMode("mep-analysis"));
   els.renamingSystemsButton.addEventListener("click", () => setToolMode("sga"));
   els.settingsButton.addEventListener("click", openSettings);
   els.settingsCloseButton.addEventListener("click", closeSettings);
@@ -287,7 +305,9 @@ function bindEvents() {
   });
   els.photosModeButton.addEventListener("click", () => setWorkflowMode("photos"));
   els.pdfsModeButton.addEventListener("click", () => setWorkflowMode("pdfs"));
-  els.tutorialPageButton.addEventListener("click", rememberTutorialReturn);
+  if (els.tutorialPageButton) {
+    els.tutorialPageButton.addEventListener("click", rememberTutorialReturn);
+  }
   els.selectAllButton.addEventListener("click", () => setAllParents(true));
   els.deselectAllButton.addEventListener("click", () => setAllParents(false));
   els.renameButton.addEventListener("click", processFolder);
@@ -538,16 +558,25 @@ function updateToolMode() {
   } else if (state.activeTool === "construction") {
     els.workflowSubtitle.textContent = "Construction Document Tools";
     els.headerCopy.textContent = "Choose a construction document review or rendering tool.";
+  } else if (COMING_SOON_TOOLS[state.activeTool]) {
+    const tool = COMING_SOON_TOOLS[state.activeTool];
+    els.workflowSubtitle.textContent = tool.title;
+    els.headerCopy.textContent = tool.copy;
+    els.comingSoonTitle.textContent = tool.title;
   }
 }
 
 function setWorkflowMode(mode) {
   if (state.processing || state.activeWorkflow === mode) return;
+  if (state.activeTool === "sga" && mode !== "photos") return;
   state.activeWorkflow = mode;
   updateWorkflowMode();
 }
 
 function updateWorkflowMode() {
+  if (state.activeTool === "sga" && state.activeWorkflow !== "photos") {
+    state.activeWorkflow = "photos";
+  }
   const isPhotos = state.activeWorkflow === "photos";
   const isPdfs = state.activeWorkflow === "pdfs";
   document.body.dataset.workflow = state.activeWorkflow;
@@ -567,7 +596,7 @@ function updateWorkflowMode() {
     els.pdfsModeButton.title = "Switch to the PDF renaming workflow.";
   }
   if (state.activeTool === "sga") {
-    els.workflowSubtitle.textContent = isPhotos ? "Photo Renamer" : "PDF Renamer";
+    els.workflowSubtitle.textContent = "Photo Renamer";
     els.headerCopy.textContent = "Drop or choose a main folder, select parent folders, review the rename list, then download the updated folder as a ZIP.";
   }
   els.photosModeButton.classList.toggle("active", isPhotos);
@@ -584,6 +613,8 @@ function initializeTooltips() {
     [els.blankDuplicateDiscarderButton, "Open SGA Backup Discarder."],
     [els.firmToolsButton, "Open firm-specific SGA tools."],
     [els.constructionToolsButton, "Open Construction Document Tools."],
+    [els.promptBuilderButton, "Open SGA Prompt Builder."],
+    [els.mepAnalysisButton, "Open SGA MEP Analysis."],
     [els.renamingSystemsButton, "Open the current SGA File Nexus renaming website."],
     [els.settingsButton, "Open shared settings for the data hygiene tools."],
     [els.serverScanButton, "Scan a folder path from the local server for very large jobs."],

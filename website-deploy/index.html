@@ -6,6 +6,11 @@
     <title>SGA FILE NEXUS</title>
     <link rel="stylesheet" href="styles.css">
     <link rel="stylesheet" href="folder-discarder.css">
+    <script>
+      if (window.location.protocol === "file:") {
+        window.location.replace("http://127.0.0.1:8080/");
+      }
+    </script>
   </head>
   <body data-tool="home" data-workflow="photos" data-auth="logged-out" data-auth-view="login">
     <section id="loginScreen" class="login-screen" aria-label="Login">
@@ -205,6 +210,14 @@
               <span>Construction Document Tools</span>
               <small>Construction document cleanup and review tools will live here.</small>
             </button>
+            <button id="promptBuilderButton" class="tool-card active-tool-card" type="button" title="Open SGA Prompt Builder.">
+              <span>SGA Prompt Builder</span>
+              <small>Build reusable prompts for project renders to speed up SGA workflows.</small>
+            </button>
+            <button id="mepAnalysisButton" class="tool-card active-tool-card" type="button" title="Open SGA MEP Analysis.">
+              <span>SGA MEP Analysis</span>
+              <small>Compile MEP construction data and guide decisions.</small>
+            </button>
             <button id="renamingSystemsButton" class="tool-card active-tool-card" type="button" title="Open the current SGA File Nexus renaming website.">
               <span>Renaming Systems</span>
               <small>Open the current SGA File Nexus photo and file renaming website.</small>
@@ -245,18 +258,15 @@
         </section>
       </section>
 
-      <section id="sgaToolWorkspace" class="tool-workspace">
-        <section class="panel pdf-workspace" aria-label="PDF workflow">
+      <section id="comingSoonWorkspace" class="coming-soon-workspace">
+        <section class="panel hub-panel coming-soon-panel">
+          <p class="eyebrow">Coming Soon</p>
+          <h2 id="comingSoonTitle">Coming Soon</h2>
           <div class="pdf-coming-soon">Coming soon!</div>
         </section>
+      </section>
 
-        <a class="tutorial-workspace tutorial-page-button" href="tutorials/photo-renamer-talking-tutorial.html" aria-label="Open Photo Renamer tutorial">
-          <span>
-            <span class="eyebrow">Tutorial</span>
-            <strong>Photo Renamer Walkthrough</strong>
-          </span>
-        </a>
-
+      <section id="sgaToolWorkspace" class="tool-workspace">
         <section class="upload-hero">
         <div id="dropZone" class="drop-zone" tabindex="0">
           <div class="drop-icon" aria-hidden="true">+</div>

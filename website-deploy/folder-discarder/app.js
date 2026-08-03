@@ -235,7 +235,7 @@ function bindEvents() {
   els.downloadWorkbookButton.addEventListener("click", downloadWorkbookReport);
   els.downloadPdfButton.addEventListener("click", downloadPdfReport);
   els.cleanupTabButton.addEventListener("click", () => switchTab("cleanup"));
-  els.hygieneTabButton.addEventListener("click", () => switchTab("hygiene"));
+  els.hygieneTabButton?.addEventListener("click", () => switchTab("hygiene"));
   els.checkBackendButton.addEventListener("click", checkBackendPath);
   els.scanBackendButton.addEventListener("click", () => scanBackendFolder(true));
   els.cancelBackendButton.addEventListener("click", cancelBackendOperation);
@@ -300,9 +300,9 @@ function switchTab(tabName) {
   state.activeTab = tabName;
   const showHygiene = tabName === "hygiene";
   els.cleanupTabButton.classList.toggle("active", !showHygiene);
-  els.hygieneTabButton.classList.toggle("active", showHygiene);
+  els.hygieneTabButton?.classList.toggle("active", showHygiene);
   els.cleanupTabButton.setAttribute("aria-selected", String(!showHygiene));
-  els.hygieneTabButton.setAttribute("aria-selected", String(showHygiene));
+  els.hygieneTabButton?.setAttribute("aria-selected", String(showHygiene));
   els.cleanupTabPanel.hidden = showHygiene;
   els.hygieneTabPanel.hidden = !showHygiene;
   els.cleanupTabPanel.classList.toggle("active", !showHygiene);
