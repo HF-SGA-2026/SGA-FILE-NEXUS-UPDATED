@@ -1,0 +1,701 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>SGA MEP Analyzer · Architectural Pre-Design Intelligence</title>
+  <meta name="description" content="Use SGA historical project data to find precedents and establish preliminary MEP planning ranges.">
+  <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+
+  <header class="app-header">
+    <div class="brand-block">
+      <p class="eyebrow">SAM GARCIA ARCHITECTS · INTERNAL TOOL</p>
+
+      <h1>SGA MEP Analyzer</h1>
+
+      <p class="subtitle">
+        Architectural Pre-Design Intelligence
+      </p>
+
+      <p class="brand-description">
+        Use SGA’s historical project data to find relevant precedents,
+        establish preliminary MEP planning ranges, and review consultant
+        experience.
+      </p>
+    </div>
+
+    <div class="header-right">
+      <div class="header-meta">
+        <span class="local-pill">● Local data only</span>
+        <span id="dataset-label" class="dataset-label"></span>
+      </div>
+
+      <div
+        id="save-trust"
+        class="save-trust"
+        aria-live="polite"
+      ></div>
+
+      <button
+        class="text-button help-link"
+        type="button"
+        data-help-open
+      >
+        How estimates work
+      </button>
+    </div>
+  </header>
+
+  <nav class="section-nav" aria-label="Primary navigation">
+    <button data-section="dashboard" class="active">Dashboard</button>
+    <button data-section="new-project">New Project</button>
+    <button data-section="past-projects">Past Projects</button>
+    <button data-section="updates">Updates</button>
+    <button data-section="consultants">Consultants</button>
+    <button data-section="data-quality">Data Quality</button>
+    <button data-section="data-import">Data Import</button>
+  </nav>
+
+  <main>
+    <section id="dashboard" class="page active">
+
+      <!-- Primary workflows -->
+      <div class="workflow-grid">
+        <article class="workflow-card workflow-card-primary">
+          <span class="step-number">01</span>
+
+          <h3>Estimate a New Project</h3>
+
+          <p>
+            Create a preliminary MEP planning range using comparable
+            historical SGA projects.
+          </p>
+
+          <button
+            type="button"
+            class="primary-link"
+            data-go="new-project"
+          >
+            Start Estimate →
+          </button>
+        </article>
+
+        <article class="workflow-card">
+          <span class="step-number">02</span>
+
+          <h3>Find Past Projects</h3>
+
+          <p>
+            Search prior projects by building type, size, consultant,
+            system, and manufacturer.
+          </p>
+
+          <button
+            type="button"
+            class="primary-link"
+            data-go="past-projects"
+          >
+            Browse Projects →
+          </button>
+        </article>
+
+        <article class="workflow-card">
+          <span class="step-number">03</span>
+
+          <h3>Review Consultants</h3>
+
+          <p>
+            See which MEP firms are represented in similar recorded SGA
+            projects.
+          </p>
+
+          <button
+            type="button"
+            class="primary-link"
+            data-go="consultants"
+          >
+            View Consultants →
+          </button>
+        </article>
+      </div>
+
+      <!-- Portfolio statistics populated by renderDashboard() -->
+      <section
+        id="portfolio-stats"
+        class="dashboard-stats"
+        aria-label="Portfolio statistics"
+      ></section>
+
+      <!-- Main dashboard content -->
+      <div class="dashboard-main-grid">
+        <section class="panel chart-panel">
+          <div class="dashboard-panel-heading">
+            <div>
+              <p class="kicker">Portfolio relationship</p>
+              <h3>Historical Project Distribution</h3>
+
+              <p class="dashboard-panel-copy">
+                Building size compared with recorded HVAC tonnage.
+              </p>
+            </div>
+
+            <span class="dashboard-chart-note">
+              Each point represents one recorded project
+            </span>
+          </div>
+
+          <div class="dashboard-chart-wrap">
+            <canvas id="tonnage-chart"></canvas>
+          </div>
+        </section>
+
+        <section class="panel recent-projects-panel">
+          <div class="dashboard-panel-heading">
+            <div>
+              <p class="kicker">Active dataset</p>
+              <h3>Recent Projects</h3>
+            </div>
+
+            <button
+              type="button"
+              class="text-button"
+              data-go="past-projects"
+            >
+              View all
+            </button>
+          </div>
+
+          <div id="recent-projects"></div>
+        </section>
+      </div>
+
+      <!-- Lower command-center panels -->
+      <div class="dashboard-lower-grid">
+        <section
+          id="dashboard-attention"
+          class="panel dashboard-attention-panel"
+        ></section>
+
+        <section
+          id="dashboard-dataset-status"
+          class="panel dashboard-dataset-panel"
+        ></section>
+      </div>
+    </section>
+
+    
+    <section id="updates" class="page">
+      
+      <div class="section-heading">
+        <div>
+          <p class="kicker">Quick office workflow</p>
+          <h2>Project Updates</h2>
+          <p class="heading-copy">
+            Quickly add or revise an individual project record. Data Import remains available for bulk spreadsheet changes.
+          </p>
+        </div>
+
+        <div class="updates-heading-actions">
+          <button
+            id="refresh-updates-data"
+            type="button"
+            class="secondary"
+          >
+            Refresh data
+          </button>
+
+          <button
+            class="text-button"
+            data-go="data-quality"
+          >
+            Review Data Quality
+          </button>
+        </div>
+      </div>
+      
+      
+      <div class="update-actions"><button id="choose-update" class="workflow-choice active">Update Existing Project</button><button id="choose-new" class="workflow-choice">Add New Project</button></div>
+      <div id="project-selector-panel" class="panel update-selector"><label>Find a project<input id="update-project-search" type="search" placeholder="Search project name or number" autocomplete="off"></label><div id="update-project-results" class="selector-results"></div></div>
+      <form id="project-update-form" class="hidden">
+        <input id="update-project-id" type="hidden">
+        <div class="update-form-grid">
+          <section class="panel form-section"><div class="step-heading"><span>A</span><div><h3>Project Information</h3><p>Identify the project and its basic status.</p></div></div>
+            <div class="field-grid"><label>Project number *<input id="update-number" required></label><label>Project name *<input id="update-name" required></label><label>Building type<input id="update-building-type"></label><label>Square footage<input id="update-sf" type="number" min="0" step="1"></label><label>MEP consultant<input id="update-consultant"></label><label>Project status<select id="update-status"><option>Completed</option><option>Construction Documents</option><option>In Construction</option><option>On Hold</option><option>Other</option></select></label><label>Completion date<input id="update-completion" type="date"></label></div>
+          </section>
+          <section class="panel form-section"><div class="step-heading"><span>B</span><div><h3>Mechanical</h3><p>Enter recorded values only. Ductwork is optional.</p></div></div>
+            <div class="field-grid"><label>Recorded project total<input id="update-tonnage" type="number" min="0" step="0.5"></label><label>HVAC unit count<input id="update-units" type="number" min="0" step="1" readonly></label><label>Primary HVAC system type<input id="update-system"></label><label>Manufacturer<input id="update-manufacturer"></label><label>Model<input id="update-model"></label><label>Duct linear feet<input id="update-duct" type="number" min="0" step="1"></label><label class="full-field">Mechanical notes<textarea id="update-mech-notes" rows="3"></textarea></label></div><div class="equipment-editor-heading"><h4>Mechanical equipment</h4><button id="add-mechanical-unit" type="button" class="secondary">Add unit</button></div><div id="mechanical-unit-editor" class="equipment-editor"></div><div id="mechanical-total-check" class="total-check"></div>
+          </section>
+          <section class="panel form-section"><div class="step-heading"><span>C</span><div><h3>Electrical</h3><p>Panel count is enough to create a useful electrical record.</p></div></div>
+            <div class="field-grid"><label>Electrical panel count<input id="update-panels" type="number" min="0" step="1"></label><label>Electrical service size<input id="update-service" placeholder="Example: 800A, 480/277V"></label><label class="full-field">Main electrical notes<textarea id="update-elec-notes" rows="3"></textarea></label></div><div class="equipment-editor-heading"><h4>Electrical panels / equipment</h4><button id="add-electrical-row" type="button" class="secondary">Add row</button></div><div id="electrical-row-editor" class="equipment-editor"></div>
+          </section>
+          <section class="panel form-section"><div class="step-heading"><span>D</span><div><h3>Data Source</h3><p>Record where this update came from. Accounts are not required.</p></div></div>
+            <div class="field-grid"><label>Entered by<input id="update-entered-by" placeholder="Name or initials (optional)"></label><label>Source type<select id="update-source"><option>Final consultant documents</option><option>Construction documents</option><option>Field verified</option><option>Staff estimate</option><option>Other</option></select></label><label class="check full-field"><input id="update-excluded" type="checkbox"> Exclude this project from estimator and consultant statistics</label></div>
+          </section>
+        </div>
+        <aside id="historical-estimate" class="panel estimated-panel"></aside>
+        <div id="update-validation" class="panel hidden"></div>
+        <div class="form-submit"><button type="button" id="cancel-update" class="secondary">Cancel</button><button type="submit" class="primary">Review & save project</button></div>
+      </form>
+    </section>
+    
+
+
+    
+    <section id="new-project" class="page">
+      <div class="section-heading">
+        <div>
+          <p class="kicker">Primary workflow</p>
+          <h2>New Project</h2>
+          <p class="heading-copy">
+            Establish an early planning range and find the most relevant
+            SGA precedents.
+          </p>
+        </div>
+
+        <button
+          class="text-button"
+          type="button"
+          data-help-open
+        >
+          How estimates work
+        </button>
+      </div>
+
+      <div class="project-wizard">
+        <div
+          class="wizard-progress"
+          aria-label="New project progress"
+        >
+          <button
+            class="wizard-progress-item is-active"
+            type="button"
+            data-wizard-go="1"
+          >
+            <span class="wizard-step-number">1</span>
+
+            <span class="wizard-step-copy">
+              <strong>Project Information</strong>
+              <span>Size and building type</span>
+            </span>
+          </button>
+
+          <button
+            class="wizard-progress-item"
+            type="button"
+            data-wizard-go="2"
+          >
+            <span class="wizard-step-number">2</span>
+
+            <span class="wizard-step-copy">
+              <strong>Planning Setup</strong>
+              <span>Scope and consultant</span>
+            </span>
+          </button>
+
+          <button
+            class="wizard-progress-item"
+            type="button"
+            data-wizard-go="3"
+          >
+            <span class="wizard-step-number">3</span>
+
+            <span class="wizard-step-copy">
+              <strong>Review Project</strong>
+              <span>Confirm your inputs</span>
+            </span>
+          </button>
+
+          <button
+            class="wizard-progress-item"
+            type="button"
+            data-wizard-go="4"
+          >
+            <span class="wizard-step-number">4</span>
+
+            <span class="wizard-step-copy">
+              <strong>Planning Range</strong>
+              <span>Historical estimate</span>
+            </span>
+          </button>
+
+          <button
+            class="wizard-progress-item"
+            type="button"
+            data-wizard-go="5"
+          >
+            <span class="wizard-step-number">5</span>
+
+            <span class="wizard-step-copy">
+              <strong>SGA Precedents</strong>
+              <span>Similar past projects</span>
+            </span>
+          </button>
+        </div>
+
+        <form id="estimator-form">
+          <section
+            class="wizard-step-panel"
+            data-wizard-step="1"
+          >
+            <div class="wizard-main">
+              <p class="wizard-kicker">Step 1 of 5</p>
+              <h3 class="wizard-heading">Project Information</h3>
+
+              <p class="wizard-intro">
+                Start with the proposed size and general building type.
+                These values determine which historical SGA projects are
+                most relevant.
+              </p>
+
+              <div class="wizard-form-grid">
+                <div class="wizard-field">
+                  <label for="estimate-sf">
+                    Building square footage
+                  </label>
+
+                  <input
+                    id="estimate-sf"
+                    type="number"
+                    min="100"
+                    step="100"
+                    value="10000"
+                    required
+                  >
+                </div>
+
+                <div class="wizard-field">
+                  <label for="estimate-type">
+                    Building type
+                  </label>
+
+                  <select id="estimate-type"></select>
+                </div>
+              </div>
+
+              <div class="wizard-actions">
+                <div></div>
+
+                <div class="wizard-actions-right">
+                  <button
+                    class="wizard-button primary"
+                    type="button"
+                    data-wizard-next="2"
+                  >
+                    Continue to planning setup
+                  </button>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <section
+            class="wizard-step-panel"
+            data-wizard-step="2"
+            hidden
+          >
+            <div class="wizard-main">
+              <p class="wizard-kicker">Step 2 of 5</p>
+              <h3 class="wizard-heading">Planning Setup</h3>
+
+              <p class="wizard-intro">
+                Select the planning scope and optionally narrow the
+                historical comparison to a consultant represented in
+                SGA records.
+              </p>
+
+              <div class="wizard-form-grid">
+                <div class="wizard-field">
+                  <label for="estimate-scope">
+                    Planning scope
+                  </label>
+
+                  <select id="estimate-scope">
+                    <option>Mechanical + Electrical</option>
+                    <option>Mechanical</option>
+                    <option>Electrical</option>
+                  </select>
+                </div>
+
+                <div class="wizard-field">
+                  <label for="estimate-consultant">
+                    MEP consultant
+                  </label>
+
+                  <select id="estimate-consultant"></select>
+                </div>
+              </div>
+
+              <div class="wizard-message-list">
+                <div class="wizard-message">
+                  Consultant history is provided for context only.
+                  This tool does not rank engineering quality or make
+                  final consultant selections.
+                </div>
+              </div>
+
+              <div class="wizard-actions">
+                <button
+                  class="wizard-button"
+                  type="button"
+                  data-wizard-back="1"
+                >
+                  Back
+                </button>
+
+                <div class="wizard-actions-right">
+                  <button
+                    class="wizard-button primary"
+                    type="button"
+                    data-wizard-next="3"
+                  >
+                    Review project
+                  </button>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <section
+            class="wizard-step-panel"
+            data-wizard-step="3"
+            hidden
+          >
+            <div class="wizard-main">
+              <p class="wizard-kicker">Step 3 of 5</p>
+              <h3 class="wizard-heading">Review Project</h3>
+
+              <p class="wizard-intro">
+                Confirm the proposed project information before generating
+                the historical planning range.
+              </p>
+
+              <div
+                id="wizard-project-review"
+                class="wizard-review-list"
+              ></div>
+
+              <div class="wizard-actions">
+                <button
+                  class="wizard-button"
+                  type="button"
+                  data-wizard-back="2"
+                >
+                  Back
+                </button>
+
+                <div class="wizard-actions-right">
+                  <button
+                    class="wizard-button primary"
+                    type="submit"
+                  >
+                    Generate planning range
+                  </button>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <section
+            class="wizard-step-panel"
+            data-wizard-step="4"
+            hidden
+          >
+            <div class="wizard-main">
+              <p class="wizard-kicker">Step 4 of 5</p>
+              <h3 class="wizard-heading">Preliminary Planning Range</h3>
+
+              <p class="wizard-intro">
+                Review the historical range generated from comparable
+                SGA projects.
+              </p>
+
+              <div
+                id="estimate-results"
+                class="estimate-results empty-state"
+              >
+                Complete the first three steps to generate a preliminary
+                planning range.
+              </div>
+
+              <div class="wizard-actions">
+                <button
+                  class="wizard-button"
+                  type="button"
+                  data-wizard-back="3"
+                >
+                  Edit project
+                </button>
+
+                <div class="wizard-actions-right">
+                  <button
+                    class="wizard-button primary"
+                    type="button"
+                    data-wizard-next="5"
+                  >
+                    View similar projects
+                  </button>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <section
+            class="wizard-step-panel"
+            data-wizard-step="5"
+            hidden
+          >
+            <div class="wizard-main">
+              <p class="wizard-kicker">Step 5 of 5</p>
+              <h3 class="wizard-heading">SGA Precedents</h3>
+
+              <p class="wizard-intro">
+                Review the past projects and consultant history used to
+                provide context for this planning range.
+              </p>
+
+              <div id="wizard-precedent-results"></div>
+
+              <div class="wizard-actions">
+                <button
+                  class="wizard-button"
+                  type="button"
+                  data-wizard-back="4"
+                >
+                  Back to planning range
+                </button>
+
+                <div class="wizard-actions-right">
+                  <button
+                    class="wizard-button primary"
+                    type="button"
+                    id="wizard-new-estimate"
+                  >
+                    Start another estimate
+                  </button>
+                </div>
+              </div>
+            </div>
+          </section>
+        </form>
+      </div>
+    </section>
+    
+
+
+
+
+
+
+    <section id="past-projects" class="page">
+      <div>
+        <p class="kicker">SGA precedents</p>
+        <h2>Past Projects</h2>
+        <p class="heading-copy">
+          Search recorded SGA projects, compare MEP systems,
+          and review available project data.
+        </p>
+      </div>
+      
+      
+      
+      <div class="panel filters">
+        <label class="search-field">Search<input id="project-search" type="search" placeholder="Project name or number"></label>
+        <label>Building type<select id="filter-type"></select></label>
+        <label>Consultant<select id="filter-consultant"></select></label>
+        <label>HVAC system type<select id="filter-unit"></select></label>
+        <label>Manufacturer<select id="filter-manufacturer"></select></label>
+        <details class="additional-filters"><summary>Additional filters</summary><div><label class="check"><input id="filter-special" type="checkbox"> Custom / unusual equipment</label><label class="check"><input id="filter-missing" type="checkbox"> Records with warnings</label></div></details>
+      </div>
+      <div id="project-count" class="record-count"></div>
+      <div id="projects-table" class="panel table-wrap"></div>
+    </section>
+
+    <section id="consultants" class="page">
+      <div class="section-heading"><div><p class="kicker">Recorded consultant experience</p><h2>Consultants</h2><p class="heading-copy">Historical patterns may reflect project type and scope. They are not measures of engineering quality.</p></div><button id="toggle-comparison" class="secondary">Compare selected consultants</button></div>
+      <div id="consultant-cards" class="consultant-grid"></div>
+      <div id="consultant-profile" class="panel hidden"></div>
+      <div id="comparison-mode" class="comparison-mode hidden">
+        <div class="panel-heading"><div><p class="kicker">Secondary view</p><h3>Compare recorded patterns</h3></div><button id="close-comparison" class="text-button">Close comparison</button></div>
+        <div id="consultant-picker" class="checkbox-row"></div>
+        <div id="comparison-table-wrap" class="panel table-wrap"></div>
+        <div id="tendencies" class="tendency-grid"></div>
+      </div>
+    </section>
+
+    <section id="data-quality" class="page">
+      <div class="section-heading">
+        <div>
+          <p class="kicker">Data follow-up</p>
+
+          <h2>Data Review</h2>
+
+          <p class="heading-copy">
+            Review missing information, conflicting values, and records that may need staff follow-up.
+          </p>
+        </div>
+
+        <div class="updates-heading-actions">
+          <button
+            id="refresh-data-quality"
+            class="secondary"
+            type="button"
+          >
+            Refresh
+          </button>
+
+          <button
+            id="add-issue"
+            class="secondary"
+            type="button"
+          >
+            Add staff note
+          </button>
+        </div>
+      </div>      
+      
+      <div id="issue-summary" class="portfolio-stats issue-stats"></div>
+      <div class="panel issue-filters"><label>Search<input id="issue-search" type="search" placeholder="Project name or number"></label><label>Discipline<select id="issue-discipline"><option value="">All disciplines</option><option>Mechanical</option><option>Electrical</option><option>General</option></select></label><label>Review group<select id="issue-severity"><option value="">All review groups</option><option>Needs Review</option><option>Missing Information</option><option>Informational Notes</option><option>Resolved</option></select></label><label>Status<select id="issue-status"><option value="">All statuses</option><option>Unresolved</option><option>Resolved</option></select></label><label class="check"><input id="issue-unresolved" type="checkbox" checked> Unresolved only</label></div>
+      <div id="issue-editor" class="panel hidden"></div>
+      <div id="issues-table" class="panel table-wrap"></div>
+    </section>
+
+    <section id="data-import" class="page">
+      <div class="section-heading"><div><p class="kicker">Local data workflow</p><h2>Data Import</h2><p class="heading-copy">Spreadsheet contents stay on this computer and are never transmitted to an external service.</p></div></div>
+      <div id="management-cards" class="management-grid"></div>
+      <div class="import-steps" aria-label="Import progress"><span class="active" data-step-label="1">1 · Upload</span><span data-step-label="2">2 · Verify Columns</span><span data-step-label="3">3 · Review Records</span><span data-step-label="4">4 · Save Data</span></div>
+      <section id="import-step-1" class="panel import-step active-step">
+        <div class="step-heading"><span>1</span><div><h3>Upload Spreadsheet</h3><p>Choose a Mechanical or Electrical workbook.</p></div></div>
+        <form id="import-form" enctype="multipart/form-data" class="upload-row">
+          <label>Data type<select id="import-type" name="type"><option value="mechanical">Mechanical</option><option value="electrical">Electrical</option></select></label>
+          <label class="file-label">Spreadsheet file<input id="import-file" name="file" type="file" accept=".xlsx,.xls,.csv" required></label>
+          <button class="primary" type="submit">Upload & inspect</button>
+        </form>
+        <p class="helper">Accepted: .xlsx, .xls, .csv · Maximum 25 MB</p><div id="import-status" role="status" class="status"></div>
+      </section>
+      <section id="mapping-panel" class="panel import-step hidden"></section>
+      <section id="preview-panel" class="panel import-step hidden"></section>
+      <section id="save-panel" class="panel import-step hidden"></section>
+    </section>
+  </main>
+
+  <footer><p><strong>Historical observations only.</strong> Preliminary planning use—not an engineering calculation, equipment selection, or consultant recommendation. Accuracy depends on imported data; small samples and missing fields reduce confidence. Data is stored on this installation unless deployed to a shared firm server. <button class="text-button" data-help-open>Data limitations</button></p></footer>
+
+  <dialog id="help-dialog">
+    <div class="dialog-header"><div><p class="kicker">Methodology & limitations</p><h2>How estimates work</h2></div><button id="close-help" class="dialog-close" aria-label="Close">×</button></div>
+    <div class="method-grid">
+      <article><h3>Comparable projects</h3><p>The estimate first uses the same building type and selected consultant, then the same building type across consultants, then the consultant across building types, and finally the full dataset. Any fallback is disclosed.</p></article>
+      <article><h3>Mechanical planning</h3><p>Tonnage uses median square feet per ton. Ductwork uses median duct feet per square foot. HVAC unit count uses the median square feet per unit.</p></article>
+      <article><h3>Electrical planning</h3><p>Panel count uses median square feet per panel. Missing information is not fabricated.</p></article>
+      <article><h3>Ranges</h3><p>With enough records, ranges use the 25th and 75th percentiles. Small datasets use observed minimum and maximum values and receive a lower confidence label.</p></article>
+      <article><h3>Average and median</h3><p>Averages use every value and can shift with large projects. The median is the middle observed value and is generally more stable for early planning.</p></article>
+      <article><h3>Required caution</h3><p>These are historical observations only—not engineering calculations, code analysis, equipment selections, construction-document recommendations, quality rankings, or consultant recommendations.</p></article>
+    </div>
+  </dialog>
+  <div id="toast" class="toast" role="status"></div>
+  <script src="/vendor/chart.js"></script>
+  <script src="/analysis.js"></script>
+  <script src="/app.js"></script>
+</body>
+</html>

@@ -7,10 +7,13 @@ $venvPython = Join-Path $venvDirectory "Scripts\python.exe"
 $requirementsFile = Join-Path $repositoryRoot "requirements.txt"
 $requirementsMarker = Join-Path $venvDirectory ".requirements.sha256"
 $fastApiUrl = "http://127.0.0.1:8006/"
+$mepUrl = "http://127.0.0.1:3000/"
+$mepDirectory = Join-Path $repositoryRoot "apps\mep-analyzer"
 $nexusUrl = "http://127.0.0.1:8080/api/status"
 $startupTimeoutSeconds = 90
 $fastApiProcess = $null
 $nexusProcess = $null
+$mepProcess = $null
 $script:stopRequested = $false
 
 function Write-Step {
@@ -220,14 +223,19 @@ function Start-LoggedProcess {
     [string]$Name,
     [string]$FilePath,
     [string[]]$ArgumentList,
-    [hashtable]$EnvironmentVariables = @{}
+    [hashtable]$EnvironmentVariables = @{},
+    [string]$WorkingDirectory 
   )
+
+  if ([string]::IsNullOrWhiteSpace($WorkingDirectory)) {
+    $WorkingDirectory = $repositoryRoot
+  }
 
   $process = New-Object System.Diagnostics.Process
   $process.StartInfo = New-Object System.Diagnostics.ProcessStartInfo
   $process.StartInfo.FileName = $FilePath
   $process.StartInfo.Arguments = Join-ProcessArguments $ArgumentList
-  $process.StartInfo.WorkingDirectory = $repositoryRoot
+  $process.StartInfo.WorkingDirectory = $WorkingDirectory
   $process.StartInfo.UseShellExecute = $false
   $process.StartInfo.CreateNoWindow = $true
   $process.StartInfo.RedirectStandardOutput = $true
@@ -343,6 +351,7 @@ try {
   Ensure-VirtualEnvironment -SystemPython $systemPython
   Ensure-Requirements
   Assert-PortAvailable -Url $fastApiUrl -ServiceName "QC Integrity Check"
+  Assert-PortAvailable -Url $mepUrl -ServiceName "SGA MEP Analyzer"
   Assert-PortAvailable -Url $nexusUrl -ServiceName "SGA File Nexus"
 
   [Console]::add_CancelKeyPress($cancelHandler)
@@ -353,17 +362,36 @@ try {
   ) -EnvironmentVariables @{ "PYTHONUNBUFFERED" = "1" }
   Wait-ForServiceReady -ManagedProcess $fastApiProcess -Name "QC Integrity Check" -Url $fastApiUrl -TimeoutSeconds $startupTimeoutSeconds
 
+
+  Write-Step "Starting SGA MEP Analyzer on http://127.0.0.1:3000"
+
+  $mepProcess = Start-LoggedProcess `
+    -Name "MEP" `
+    -FilePath "node" `
+    -ArgumentList @("server.js") `
+    -WorkingDirectory $mepDirectory
+
+  Wait-ForServiceReady `
+    -ManagedProcess $mepProcess `
+    -Name "SGA MEP Analyzer" `
+    -Url $mepUrl `
+    -TimeoutSeconds 30
+
   Write-Step "Starting SGA File Nexus on http://127.0.0.1:8080"
   $nexusProcess = Start-LoggedProcess -Name "Nexus" -FilePath "node" -ArgumentList @("server.js")
   Wait-ForServiceReady -ManagedProcess $nexusProcess -Name "SGA File Nexus" -Url $nexusUrl -TimeoutSeconds 30
-  Write-Step "Both services are ready. Open http://127.0.0.1:8080"
+  Write-Step "All services are ready. Open http://127.0.0.1:8080"
   Write-Step "Press Ctrl+C to stop both services."
 
   while (-not $script:stopRequested) {
     Write-AvailableProcessLogs $fastApiProcess
+    Write-AvailableProcessLogs $mepProcess
     Write-AvailableProcessLogs $nexusProcess
     if ($fastApiProcess.Process.HasExited) {
       throw "QC Integrity Check stopped unexpectedly with exit code $($fastApiProcess.Process.ExitCode)."
+    }
+    if ($mepProcess.Process.HasExited) {
+      throw "SGA MEP Analyzer stopped unexpectedly with exit code $($mepProcess.Process.ExitCode)."
     }
     if ($nexusProcess.Process.HasExited) {
       throw "SGA File Nexus stopped unexpectedly with exit code $($nexusProcess.Process.ExitCode)."
@@ -375,6 +403,7 @@ try {
   $global:LASTEXITCODE = 1
 } finally {
   Stop-ChildProcess -ManagedProcess $nexusProcess -Name "SGA File Nexus"
+  Stop-ChildProcess -ManagedProcess $mepProcess -Name "SGA MEP Analyzer"
   Stop-ChildProcess -ManagedProcess $fastApiProcess -Name "QC Integrity Check"
   try {
     [Console]::remove_CancelKeyPress($cancelHandler)

@@ -431,6 +431,7 @@ body[data-tool="construction"] #pdfsModeButton {
 .blank-duplicate-workspace,
 .construction-workspace,
 .coming-soon-workspace,
+.mep-analysis-workspace,
 .tool-workspace {
   display: none;
 }
@@ -441,9 +442,21 @@ body[data-tool="folder-discarder"] .folder-discarder-workspace,
 body[data-tool="blank-duplicate"] .blank-duplicate-workspace,
 body[data-tool="construction"] .construction-workspace,
 body[data-tool="prompt-builder"] .coming-soon-workspace,
-body[data-tool="mep-analysis"] .coming-soon-workspace,
+body[data-tool="mep-analysis"] .mep-analysis-workspace,
 body[data-tool="sga"] .tool-workspace {
   display: block;
+}
+
+.mep-analysis-workspace {
+  width: 100%;
+}
+
+.mep-analysis-frame {
+  display: block;
+  width: 100%;
+  min-height: calc(100vh - 190px);
+  border: 0;
+  background: #fff;
 }
 
 .hub-panel {

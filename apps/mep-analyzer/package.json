@@ -1,0 +1,17 @@
+{
+  "name": "sga-mep-analyzer",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Local historical MEP data analysis tool for Sam Garcia Architects",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "test": "node --test"
+  },
+  "dependencies": {
+    "chart.js": "^4.4.9",
+    "express": "^5.1.0",
+    "multer": "^2.0.2",
+    "xlsx": "https://cdn.sheetjs.com/xlsx-0.20.3/xlsx-0.20.3.tgz"
+  }
+}

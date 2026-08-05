@@ -28,10 +28,6 @@ const COMING_SOON_TOOLS = {
     title: "SGA Prompt Builder",
     copy: "SGA Prompt Builder is coming soon."
   },
-  "mep-analysis": {
-    title: "SGA MEP Analysis",
-    copy: "SGA MEP Analysis is coming soon."
-  }
 };
 
 const state = {
@@ -113,6 +109,8 @@ const els = {
   constructionToolsButton: document.getElementById("constructionToolsButton"),
   promptBuilderButton: document.getElementById("promptBuilderButton"),
   mepAnalysisButton: document.getElementById("mepAnalysisButton"),
+  mepAnalysisWorkspace: document.getElementById("mepAnalysisWorkspace"),
+  mepAnalysisFrame: document.getElementById("mepAnalysisFrame"),
   renamingSystemsButton: document.getElementById("renamingSystemsButton"),
   comingSoonTitle: document.getElementById("comingSoonTitle"),
   settingsButton: document.getElementById("settingsButton"),
@@ -523,6 +521,10 @@ function setToolMode(mode) {
 }
 
 function navigateToParentTool() {
+  if (state.activeTool === "sga") {
+    setToolMode("firm");
+    return;
+  }
   setToolMode(TOOL_PARENTS.get(state.activeTool) || "home");
 }
 

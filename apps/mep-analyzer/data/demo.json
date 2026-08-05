@@ -1,0 +1,85 @@
+{
+  "version": 1,
+  "isDemo": true,
+  "label": "Demonstration Data — Replace With Firm Spreadsheet",
+  "imports": { "mechanical": null, "electrical": null },
+  "projects": [
+    {
+      "id": "demo-101", "projectNumber": "DEMO-101", "projectName": "Mesa Community Library", "buildingType": "Library", "consultant": "Northstar MEP", "squareFeet": 12400,
+      "mechanical": { "totalTonnage": 34, "totalDuctFeet": 2380, "units": [
+        { "name": "RTU-1", "tonnage": 12.5, "type": "Packaged rooftop", "manufacturer": "Fictional Air Co.", "model": "FA-125", "ductFeet": 880, "classification": "Standard", "notes": null },
+        { "name": "RTU-2", "tonnage": 12.5, "type": "Packaged rooftop", "manufacturer": "Fictional Air Co.", "model": "FA-125", "ductFeet": 840, "classification": "Standard", "notes": null },
+        { "name": "RTU-3", "tonnage": 9, "type": "Packaged rooftop", "manufacturer": "Fictional Air Co.", "model": "FA-090", "ductFeet": 660, "classification": "Standard", "notes": null }
+      ] },
+      "electrical": { "panelCount": 5, "panels": [{ "name": "Main distribution", "count": 1 }, { "name": "Branch panel", "count": 4 }], "serviceInfo": "Demo 800A service", "notes": "Fictional demonstration information." },
+      "notes": ["Fictional demonstration record."], "quality": []
+    },
+    {
+      "id": "demo-102", "projectNumber": "DEMO-102", "projectName": "Canyon Administration Center", "buildingType": "Office", "consultant": "Redwood Engineering", "squareFeet": 9800,
+      "mechanical": { "totalTonnage": 27.5, "totalDuctFeet": 1910, "units": [
+        { "name": "AHU-1", "tonnage": 17.5, "type": "Split system", "manufacturer": "Demo Mechanical", "model": "DM-175", "ductFeet": 1180, "classification": "Standard", "notes": null },
+        { "name": "AHU-2", "tonnage": 10, "type": "Split system", "manufacturer": "Demo Mechanical", "model": "DM-100", "ductFeet": 730, "classification": "Standard", "notes": null }
+      ] },
+      "electrical": { "panelCount": 4, "panels": [{ "name": "MDP", "count": 1 }, { "name": "Lighting/power", "count": 3 }], "serviceInfo": "Demo 600A service", "notes": null },
+      "notes": [], "quality": []
+    },
+    {
+      "id": "demo-103", "projectNumber": "DEMO-103", "projectName": "Juniper Public Safety Annex", "buildingType": "Public Safety", "consultant": "Northstar MEP", "squareFeet": 18600,
+      "mechanical": { "totalTonnage": 52, "totalDuctFeet": 3620, "units": [
+        { "name": "RTU-1", "tonnage": 20, "type": "Packaged rooftop", "manufacturer": "Fictional Air Co.", "model": "FA-200", "ductFeet": 1420, "classification": "Standard", "notes": null },
+        { "name": "RTU-2", "tonnage": 20, "type": "Packaged rooftop", "manufacturer": "Fictional Air Co.", "model": "FA-200", "ductFeet": 1370, "classification": "Standard", "notes": null },
+        { "name": "DOAS-1", "tonnage": 12, "type": "Dedicated outdoor air", "manufacturer": "Example Systems", "model": "ES-12", "ductFeet": 830, "classification": "Unusual", "notes": "Special ventilation requirement — fictional." }
+      ] },
+      "electrical": { "panelCount": 7, "panels": [{ "name": "Emergency distribution", "count": 2 }, { "name": "Normal power", "count": 5 }], "serviceInfo": "Demo 1200A service with generator", "notes": null },
+      "notes": ["Special ventilation requirement — fictional."], "quality": []
+    },
+    {
+      "id": "demo-104", "projectNumber": "DEMO-104", "projectName": "Willow Creek Recreation Hall", "buildingType": "Recreation", "consultant": "Copperline Consulting", "squareFeet": 15400,
+      "mechanical": { "totalTonnage": 45, "totalDuctFeet": 3010, "units": [
+        { "name": "RTU-1", "tonnage": 15, "type": "Packaged rooftop", "manufacturer": "Fictional Air Co.", "model": "FA-150", "ductFeet": 1010, "classification": "Standard", "notes": null },
+        { "name": "RTU-2", "tonnage": 15, "type": "Packaged rooftop", "manufacturer": "Fictional Air Co.", "model": "FA-150", "ductFeet": 1000, "classification": "Standard", "notes": null },
+        { "name": "RTU-3", "tonnage": 15, "type": "Packaged rooftop", "manufacturer": "Fictional Air Co.", "model": "FA-150", "ductFeet": 1000, "classification": "Standard", "notes": null }
+      ] },
+      "electrical": { "panelCount": 6, "panels": [{ "name": "Distribution panel", "count": 2 }, { "name": "Branch panel", "count": 4 }], "serviceInfo": "Demo 1000A service", "notes": null },
+      "notes": [], "quality": []
+    },
+    {
+      "id": "demo-105", "projectNumber": "DEMO-105", "projectName": "Pinyon Neighborhood Clinic", "buildingType": "Healthcare", "consultant": "Redwood Engineering", "squareFeet": 7200,
+      "mechanical": { "totalTonnage": 24, "totalDuctFeet": 1510, "units": [
+        { "name": "AHU-1", "tonnage": 16, "type": "Variable air volume", "manufacturer": "Demo Mechanical", "model": "DM-V16", "ductFeet": 1040, "classification": "Custom", "notes": "Custom filtration package — fictional." },
+        { "name": "AHU-2", "tonnage": 8, "type": "Variable air volume", "manufacturer": "Demo Mechanical", "model": "DM-V08", "ductFeet": 470, "classification": "Standard", "notes": null }
+      ] },
+      "electrical": { "panelCount": 4, "panels": [{ "name": "Critical branch", "count": 1 }, { "name": "Normal branch", "count": 3 }], "serviceInfo": "Service information unavailable", "notes": null },
+      "notes": ["Custom filtration package — fictional."], "quality": ["Electrical service information is incomplete."]
+    },
+    {
+      "id": "demo-106", "projectNumber": "DEMO-106", "projectName": "Adobe Arts Pavilion", "buildingType": "Cultural", "consultant": "Copperline Consulting", "squareFeet": 22100,
+      "mechanical": { "totalTonnage": 58.5, "totalDuctFeet": 4180, "units": [
+        { "name": "AHU-1", "tonnage": 25, "type": "Variable air volume", "manufacturer": "Example Systems", "model": "ES-V25", "ductFeet": 1810, "classification": "Standard", "notes": null },
+        { "name": "AHU-2", "tonnage": 25, "type": "Variable air volume", "manufacturer": "Example Systems", "model": "ES-V25", "ductFeet": 1760, "classification": "Standard", "notes": null },
+        { "name": "CU-1", "tonnage": 8.5, "type": "Split system", "manufacturer": "Demo Mechanical", "model": "DM-085", "ductFeet": 610, "classification": "Unusual", "notes": "Gallery conditioning — fictional." }
+      ] },
+      "electrical": { "panelCount": 8, "panels": [{ "name": "Gallery power", "count": 3 }, { "name": "General distribution", "count": 5 }], "serviceInfo": "Demo 1600A service", "notes": null },
+      "notes": ["Gallery conditioning — fictional."], "quality": []
+    },
+    {
+      "id": "demo-107", "projectNumber": "DEMO-107", "projectName": "Desert Transit Operations", "buildingType": "Transportation", "consultant": "Northstar MEP", "squareFeet": 30500,
+      "mechanical": { "totalTonnage": 76, "totalDuctFeet": 5290, "units": [
+        { "name": "RTU-1", "tonnage": 25, "type": "Packaged rooftop", "manufacturer": "Fictional Air Co.", "model": "FA-250", "ductFeet": 1770, "classification": "Standard", "notes": null },
+        { "name": "RTU-2", "tonnage": 25, "type": "Packaged rooftop", "manufacturer": "Fictional Air Co.", "model": "FA-250", "ductFeet": 1750, "classification": "Standard", "notes": null },
+        { "name": "MAU-1", "tonnage": 26, "type": "Make-up air", "manufacturer": "Example Systems", "model": "ES-M26", "ductFeet": 1770, "classification": "Custom", "notes": "Maintenance bay unit — fictional." }
+      ] },
+      "electrical": { "panelCount": 10, "panels": [{ "name": "Shop distribution", "count": 4 }, { "name": "Office distribution", "count": 6 }], "serviceInfo": "Demo 2000A service", "notes": null },
+      "notes": ["Maintenance bay unit — fictional."], "quality": []
+    },
+    {
+      "id": "demo-108", "projectNumber": "DEMO-108", "projectName": "Ocotillo Field Office", "buildingType": "Office", "consultant": "Redwood Engineering", "squareFeet": 5400,
+      "mechanical": { "totalTonnage": 15, "totalDuctFeet": 980, "units": [
+        { "name": "HP-1", "tonnage": 7.5, "type": "Heat pump split", "manufacturer": "Demo Mechanical", "model": "DM-HP75", "ductFeet": 500, "classification": "Standard", "notes": null },
+        { "name": "HP-2", "tonnage": 7.5, "type": "Heat pump split", "manufacturer": "Demo Mechanical", "model": "DM-HP75", "ductFeet": 480, "classification": "Standard", "notes": null }
+      ] },
+      "electrical": { "panelCount": 3, "panels": [{ "name": "MDP", "count": 1 }, { "name": "Branch panel", "count": 2 }], "serviceInfo": "Demo 400A service", "notes": null },
+      "notes": [], "quality": []
+    }
+  ]
+}
