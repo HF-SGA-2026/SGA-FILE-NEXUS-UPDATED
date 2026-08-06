@@ -6,19 +6,8 @@ const BATCH_SIZE = 12;
 const LARGE_FOLDER_BYTES = 900 * 1024 * 1024;
 const LARGE_FOLDER_FILES = 5000;
 const PREVIEW_RENDER_LIMIT = 1000;
-const AUTH_STORAGE_KEY = "sgaDataHygieneUser";
-const RESET_PASSWORD_STORAGE_KEY = "sgaDataHygienePassword";
 const TUTORIAL_RETURN_STORAGE_KEY = "sgaDataHygieneTutorialReturn";
-const GOOGLE_WORKSPACE_DOMAIN = "samgarciaarchitect.com";
-const GOOGLE_CLIENT_ID = "";
-const GOOGLE_AUTH_READY = false;
 
-const DEMO_USERS = new Map([
-  ["hf@samgarciaarchitect.com", { password: "WarEagle" }],
-  ["ag@samgarciaarchitect.com", { password: "HookemHorns" }],
-  ["nk@samgarciaarchitect.com", { password: "RollTide" }],
-  ["el@samgarciaarchitect.com", { password: "Gig'Em" }]
-]);
 
 const TOOL_PARENTS = new Map([
   ["firm", "home"],
@@ -86,7 +75,6 @@ const els = {
   loginForm: document.getElementById("loginForm"),
   loginEmail: document.getElementById("loginEmail"),
   loginPassword: document.getElementById("loginPassword"),
-  googleLoginButton: document.getElementById("googleLoginButton"),
   forgotPasswordButton: document.getElementById("forgotPasswordButton"),
   resetPasswordScreen: document.getElementById("resetPasswordScreen"),
   resetPasswordForm: document.getElementById("resetPasswordForm"),
@@ -115,6 +103,7 @@ const els = {
   mepAnalysisButton: document.getElementById("mepAnalysisButton"),
   mepAnalysisWorkspace: document.getElementById("mepAnalysisWorkspace"),
   mepAnalysisFrame: document.getElementById("mepAnalysisFrame"),
+  qcIntegrityFrame: document.getElementById("qcIntegrityFrame"),
   renamingSystemsButton: document.getElementById("renamingSystemsButton"),
   comingSoonTitle: document.getElementById("comingSoonTitle"),
   settingsButton: document.getElementById("settingsButton"),
@@ -176,10 +165,11 @@ const els = {
   tutorialPageButton: document.querySelector(".tutorial-page-button")
 };
 
-document.addEventListener("DOMContentLoaded", () => {
+document.addEventListener("DOMContentLoaded", async () => {
   bindEvents();
-  initializeAuth();
+  await initializeAuth();
   initializeTooltips();
+  initializeRuntimeServices();
   updateToolMode();
   updateWorkflowMode();
   updateLibraryStatus();
@@ -187,42 +177,67 @@ document.addEventListener("DOMContentLoaded", () => {
 });
 
 function bindEvents() {
-  els.loginForm.addEventListener("submit", event => {
+  els.loginForm.addEventListener("submit", async event => {
     event.preventDefault();
+
     const email = els.loginEmail.value.trim();
-    const password = els.loginPassword.value.trim();
+    const password = els.loginPassword.value;
+
+    els.loginError.textContent = "";
+
     if (!email) {
-      els.loginError.textContent = "Enter an email address to sign in.";
-      return;
-    }
-    if (!password) {
-      els.loginError.textContent = "Enter your password to sign in.";
-      return;
-    }
-    if (!isValidLogin(email, password)) {
-      els.loginError.textContent = "The email or password is incorrect.";
-      return;
-    }
-    signIn({ name: email.split("@")[0] || "SGA User", email, provider: "Email" });
-  });
-  
-  els.googleLoginButton.addEventListener("click", () => {
-    if (!GOOGLE_AUTH_READY || !GOOGLE_CLIENT_ID) {
-      els.loginError.textContent =
-        "Google Workspace sign-in is being configured. " +
-        "Use Temporary local developer access for now.";
+      els.loginError.textContent = "Enter your company email address.";
       return;
     }
 
-    els.loginError.textContent =
-      `Google Workspace sign-in is ready for ${GOOGLE_WORKSPACE_DOMAIN}.`;
+    if (!password) {
+      els.loginError.textContent = "Enter the firm access password.";
+      return;
+    }
+
+    try {
+      const response = await fetch("/api/auth/login", {
+        method: "POST",
+        credentials: "same-origin",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          email,
+          password,
+        })
+      });
+
+      const data = await response.json();
+
+      if (!response.ok || !data.authenticated) {
+        throw new Error(data.error || "Login failed.");
+      }
+
+      state.authUser = data.user;
+      state.activeTool = "home";
+      state.activeWorkflow = "photos";
+
+      els.loginPassword.value = "";
+      els.loginError.textContent = "";
+
+      updateToolMode();
+      updateWorkflowMode();
+      updateAuthUi();
+    } catch (error) {
+      els.loginError.textContent = error.message;
+    }
   });
-  
-  els.forgotPasswordButton.addEventListener("click", () => setAuthView("reset"));
+  els.forgotPasswordButton.addEventListener("click", () => {
+    els.loginError.textContent =
+      "Please contact the Nexus administrator for the current firm access password.";
+  });
   els.backToLoginButton.addEventListener("click", () => setAuthView("login"));
-  els.sendResetCodeButton.addEventListener("click", sendResetCode);
   document.querySelectorAll("[data-toggle-password]").forEach(button => {
-    button.addEventListener("click", () => togglePasswordVisibility(button));
+    button.addEventListener("click", event => {
+      event.preventDefault();
+      togglePasswordVisibility(button);
+    });
   });
   els.resetPasswordForm.addEventListener("submit", event => {
     event.preventDefault();
@@ -250,9 +265,19 @@ function bindEvents() {
     setTimeout(() => setAuthView("login"), 1100);
   });
 
-  els.quickLogoutButton.addEventListener("click", signOut);
-  els.logoutButton.addEventListener("click", signOut);
+  if (els.quickLogoutButton) {
+    els.quickLogoutButton.addEventListener("click", async event => {
+      event.preventDefault();
+      await signOut();
+    });
+  }
 
+  if (els.logoutButton) {
+    els.logoutButton.addEventListener("click", async event => {
+      event.preventDefault();
+      await signOut();
+    });
+  }
   els.chooseFolderButton.addEventListener("click", async event => {
     event.preventDefault();
     event.stopPropagation();
@@ -387,18 +412,24 @@ function bindEvents() {
   });
 }
 
-function initializeAuth() {
+async function initializeAuth() {
   try {
-    const saved = JSON.parse(localStorage.getItem(AUTH_STORAGE_KEY) || "null");
-    if (saved?.email) {
-      state.authUser = saved;
-      restoreTutorialReturn();
-      updateAuthUi();
-      return;
-    }
+    const response = await fetch("/api/auth/session", {
+      credentials: "same-origin",
+      cache: "no-store"
+    });
+
+    const data = await response.json();
+
+    state.authUser =
+      response.ok && data.authenticated
+        ? data.user
+        : null;
   } catch (error) {
-    localStorage.removeItem(AUTH_STORAGE_KEY);
+    state.authUser = null;
   }
+
+  restoreTutorialReturn();
   updateAuthUi();
 }
 
@@ -436,73 +467,51 @@ function setAuthView(view) {
   setTimeout(() => focusTarget?.focus(), 0);
 }
 
-function sendResetCode() {
-  const email = els.resetEmail.value.trim().toLowerCase();
-  if (!email) {
-    els.resetMessage.textContent = "Enter your email before requesting a verification code.";
-    return;
-  }
-  if (!isAuthorizedEmail(email)) {
-    els.resetMessage.textContent = "That email is not authorized for this site.";
-    return;
-  }
-  state.resetCode = String(Math.floor(100000 + Math.random() * 900000));
-  state.resetCodeEmail = email;
-  els.resetMessage.textContent = `Verification code sent. Local demo code: ${state.resetCode}`;
-  els.resetCode.focus();
-}
+
 
 function togglePasswordVisibility(button) {
-  const input = document.getElementById(button.dataset.togglePassword);
+  const inputId = button.dataset.togglePassword;
+  const input = document.getElementById(inputId);
+
   if (!input) return;
-  const shouldShow = input.type === "password";
-  input.type = shouldShow ? "text" : "password";
-  button.textContent = shouldShow ? "Hide" : "Show";
-  button.setAttribute("aria-pressed", String(shouldShow));
+
+  const showPassword = input.type === "password";
+
+  input.type = showPassword ? "text" : "password";
+  button.textContent = showPassword ? "Hide" : "Show";
+  button.setAttribute("aria-pressed", String(showPassword));
 }
 
-function getResetPasswordKey(email) {
-  return `${RESET_PASSWORD_STORAGE_KEY}:${String(email || "").trim().toLowerCase()}`;
-}
+async function signOut() {
+  try {
+    await fetch("/api/auth/logout", {
+      method: "POST",
+      credentials: "same-origin"
+    });
+  } catch (error) {
+    console.error("Logout request failed:", error);
+  }
 
-function getDemoUser(email) {
-  return DEMO_USERS.get(String(email || "").trim().toLowerCase()) || null;
-}
-
-function isAuthorizedEmail(email) {
-  return Boolean(getDemoUser(email));
-}
-
-function getActiveLoginPassword(email) {
-  const normalized = String(email || "").trim().toLowerCase();
-  return localStorage.getItem(getResetPasswordKey(normalized)) || getDemoUser(normalized)?.password || "";
-}
-
-function setActiveLoginPassword(email, password) {
-  localStorage.setItem(getResetPasswordKey(email), password);
-}
-
-function isValidLogin(email, password) {
-  return isAuthorizedEmail(email) && password === getActiveLoginPassword(email);
-}
-
-function signIn(user) {
-  state.authUser = user;
+  state.authUser = null;
   state.activeTool = "home";
   state.activeWorkflow = "photos";
-  localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(user));
-  els.loginError.textContent = "";
+
+  closeSettings();
   updateToolMode();
   updateWorkflowMode();
   updateAuthUi();
-  addLog(`Signed in with ${user.provider}.`);
-}
 
-function signOut() {
-  localStorage.removeItem(AUTH_STORAGE_KEY);
-  state.authUser = null;
-  closeSettings();
-  updateAuthUi();
+  if (els.loginPassword) {
+    els.loginPassword.value = "";
+    els.loginPassword.type = "password";
+  }
+
+  document
+    .querySelectorAll("[data-toggle-password]")
+    .forEach(button => {
+      button.textContent = "Show";
+      button.setAttribute("aria-pressed", "false");
+    });
 }
 
 function updateAuthUi() {
@@ -618,6 +627,23 @@ function updateWorkflowMode() {
   els.photosModeButton.setAttribute("aria-pressed", String(isPhotos));
   els.pdfsModeButton.setAttribute("aria-pressed", String(isPdfs));
 }
+
+function initializeRuntimeServices() {
+  const runtimeConfig = window.SGA_RUNTIME_CONFIG || {};
+
+  if (els.qcIntegrityFrame) {
+    els.qcIntegrityFrame.src =
+      runtimeConfig.qcUrl ||
+      "http://127.0.0.1:8006";
+  }
+
+  if (els.mepAnalysisFrame) {
+    els.mepAnalysisFrame.src =
+      runtimeConfig.mepUrl ||
+      "http://127.0.0.1:3000";
+  }
+}
+
 
 function initializeTooltips() {
   const tooltipMap = new Map([
@@ -3294,4 +3320,91 @@ function formatBytes(bytes) {
 
 function yieldToBrowser() {
   return new Promise(resolve => setTimeout(resolve, 0));
+}
+
+/* Emergency auth-control bindings */
+function installAuthControlBindings() {
+  document.querySelectorAll("[data-toggle-password]").forEach(button => {
+    button.onclick = event => {
+      event.preventDefault();
+      event.stopPropagation();
+
+      const inputId = button.getAttribute("data-toggle-password");
+      const input = document.getElementById(inputId);
+
+      if (!input) {
+        console.error(`Password input not found: ${inputId}`);
+        return;
+      }
+
+      const showing = input.type === "text";
+
+      input.type = showing ? "password" : "text";
+      button.textContent = showing ? "Show" : "Hide";
+      button.setAttribute("aria-pressed", String(!showing));
+    };
+  });
+
+  ["quickLogoutButton", "logoutButton"].forEach(buttonId => {
+    const button = document.getElementById(buttonId);
+
+    if (!button) return;
+
+    button.onclick = async event => {
+      event.preventDefault();
+      event.stopPropagation();
+
+      try {
+        await fetch("/api/auth/logout", {
+          method: "POST",
+          credentials: "same-origin"
+        });
+      } catch (error) {
+        console.error("Logout request failed:", error);
+      }
+
+      state.authUser = null;
+      state.activeTool = "home";
+      state.activeWorkflow = "photos";
+
+      if (typeof closeSettings === "function") {
+        closeSettings();
+      }
+
+      if (typeof updateToolMode === "function") {
+        updateToolMode();
+      }
+
+      if (typeof updateWorkflowMode === "function") {
+        updateWorkflowMode();
+      }
+
+      if (typeof updateAuthUi === "function") {
+        updateAuthUi();
+      } else {
+        document.body.dataset.auth = "logged-out";
+      }
+
+      if (els.loginPassword) {
+        els.loginPassword.value = "";
+        els.loginPassword.type = "password";
+      }
+
+      document
+        .querySelectorAll("[data-toggle-password]")
+        .forEach(toggleButton => {
+          toggleButton.textContent = "Show";
+          toggleButton.setAttribute("aria-pressed", "false");
+        });
+    };
+  });
+}
+
+if (document.readyState === "loading") {
+  document.addEventListener(
+    "DOMContentLoaded",
+    installAuthControlBindings
+  );
+} else {
+  installAuthControlBindings();
 }

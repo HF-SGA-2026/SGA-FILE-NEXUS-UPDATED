@@ -1763,3 +1763,20 @@ tr:last-child td {
   line-height: 1.45;
   text-align: center;
 }
+
+.remember-me-row {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  margin: 4px 0 2px;
+  color: var(--muted);
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.remember-me-row input {
+  width: 16px;
+  height: 16px;
+  margin: 0;
+  accent-color: var(--sga-red);
+}

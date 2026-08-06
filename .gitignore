@@ -42,3 +42,12 @@ Thumbs.db
 
 # Private/local Codex metadata
 .agents/
+
+
+# Environment secrets
+.env
+.env.local
+.env.production
+
+# Runtime logs
+logs/

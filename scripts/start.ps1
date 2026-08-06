@@ -2,6 +2,33 @@ $ErrorActionPreference = "Stop"
 Set-StrictMode -Version Latest
 
 $repositoryRoot = Split-Path -Parent $PSScriptRoot
+$environmentFile = Join-Path $repositoryRoot ".env"
+
+if (Test-Path -LiteralPath $environmentFile -PathType Leaf) {
+  foreach ($line in Get-Content -LiteralPath $environmentFile) {
+    $trimmed = $line.Trim()
+
+    if (
+      -not $trimmed -or
+      $trimmed.StartsWith("#") -or
+      -not $trimmed.Contains("=")
+    ) {
+      continue
+    }
+
+    $separator = $trimmed.IndexOf("=")
+    $name = $trimmed.Substring(0, $separator).Trim()
+    $value = $trimmed.Substring($separator + 1).Trim()
+
+    if ($name) {
+      [Environment]::SetEnvironmentVariable(
+        $name,
+        $value,
+        "Process"
+      )
+    }
+  }
+}
 $venvDirectory = Join-Path $repositoryRoot ".venv"
 $venvPython = Join-Path $venvDirectory "Scripts\python.exe"
 $requirementsFile = Join-Path $repositoryRoot "requirements.txt"
@@ -334,7 +361,7 @@ $cancelHandler = [ConsoleCancelEventHandler]{
 
 try {
   Set-Location -LiteralPath $repositoryRoot
-  Write-Step "Preparing SGA File Nexus and QC Integrity Check..."
+  Write-Step "Preparing SGA File Nexus, QC Integrity Check, and SGA MEP Analyzer..."
 
   Refresh-ProcessPath
   $systemPython = Find-Python
@@ -381,7 +408,7 @@ try {
   $nexusProcess = Start-LoggedProcess -Name "Nexus" -FilePath "node" -ArgumentList @("server.js")
   Wait-ForServiceReady -ManagedProcess $nexusProcess -Name "SGA File Nexus" -Url $nexusUrl -TimeoutSeconds 30
   Write-Step "All services are ready. Open http://127.0.0.1:8080"
-  Write-Step "Press Ctrl+C to stop both services."
+  Write-Step "Press Ctrl+C to stop all services."
 
   while (-not $script:stopRequested) {
     Write-AvailableProcessLogs $fastApiProcess

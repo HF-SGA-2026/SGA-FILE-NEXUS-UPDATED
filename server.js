@@ -9,9 +9,39 @@ const { createBackupDiscarderService } = require("./backend/backup-discarder-ser
 
 const PORT = Number(process.env.PORT || 8080);
 const HOST = process.env.HOST || "127.0.0.1";
+const QC_INTERNAL_URL =
+  process.env.QC_INTERNAL_URL || "https://127.0.0.1.8006/";
+
+const MEP_INTERNAL_URL =
+  process.env.MEP_INTERNAL_URL || "https://127.0.0.1.3000/";
+
+const PUBLIC_QC_URL =
+  process.env.PUBLIC_QC_URL || "http://127.0.0.1:8006";
+
+const PUBLIC_MEP_URL =
+  process.env.PUBLIC_MEP_URL || "http://127.0.0.1:3000";
+
+const PUBLIC_COWORKER_TOOL_URL =
+  process.env.PUBLIC_COWORKER_TOOL_URL || "";
+
 const PUBLIC_DIR = path.join(__dirname, "website-deploy");
 const SCANS = new Map();
 const EXPORTS = new Map();
+const AUTH_SESSIONS = new Map();
+
+const ALLOWED_EMAIL_DOMAIN =
+  String(process.env.ALLOWED_EMAIL_DOMAIN || "samgarciaarchitect.com")
+    .trim()
+    .toLowerCase();
+
+const SHARED_PASSWORD =
+  String(process.env.NEXUS_SHARED_PASSWORD || "");
+
+const AUTH_SESSION_TTL_MS =
+  12 * 60 * 60 * 1000;
+const SCAN_TTL_MS = 2 * 60 * 60 * 1000;
+const EXPORT_TTL_MS = 30 * 60 * 1000;
+const CLEANUP_INTERVAL_MS = 10 * 60 * 1000;
 const folderDiscarderService = createFolderDiscarderService();
 const backupDiscarderService = createBackupDiscarderService();
 
@@ -49,12 +79,337 @@ function resolvePublicPath(urlPath) {
   return filePath;
 }
 
+function cleanupExpiredJobs() {
+  const now = Date.now();
+
+  for (const [scanId, scan] of SCANS.entries()) {
+    const lastUsed =
+      scan.lastAccessedAt ||
+      scan.createdAt ||
+      0;
+
+    if (now - lastUsed > SCAN_TTL_MS) {
+      SCANS.delete(scanId);
+    }
+  }
+
+  for (const [exportId, preparedExport] of EXPORTS.entries()) {
+    const createdAt =
+      preparedExport.createdAt ||
+      0;
+
+    if (now - createdAt > EXPORT_TTL_MS) {
+      EXPORTS.delete(exportId);
+    }
+  }
+}
+
+
+function checkService(url, timeoutMs = 2000) {
+  return new Promise(resolve => {
+    let settled = false;
+
+    const finish = result => {
+      if (settled) return;
+      settled = true;
+      resolve(result);
+    };
+
+    const request = http.get(url, response => {
+      response.resume();
+
+      finish({
+        ready:
+          response.statusCode >= 200 &&
+          response.statusCode < 500,
+        statusCode: response.statusCode
+      });
+    });
+
+    request.setTimeout(timeoutMs, () => {
+      request.destroy();
+      finish({
+        ready: false,
+        error: "Timed out"
+      });
+    });
+
+    request.on("error", error => {
+      finish({
+        ready: false,
+        error: error.message
+      });
+    });
+  });
+}
+
+
+const cleanupTimer = setInterval(
+  cleanupExpiredJobs,
+  CLEANUP_INTERVAL_MS
+);
+
+cleanupTimer.unref();
+
+function parseCookies(req) {
+  const cookies = {};
+
+  String(req.headers.cookie || "")
+    .split(";")
+    .forEach(part => {
+      const separator = part.indexOf("=");
+
+      if (separator === -1) return;
+
+      const name = part.slice(0, separator).trim();
+      const value = part.slice(separator + 1).trim();
+
+      if (name) {
+        cookies[name] = decodeURIComponent(value);
+      }
+    });
+
+  return cookies;
+}
+
+function normalizeEmail(value) {
+  return String(value || "").trim().toLowerCase();
+}
+
+function isAllowedCompanyEmail(email) {
+  const normalized = normalizeEmail(email);
+
+  return (
+    normalized.endsWith(`@${ALLOWED_EMAIL_DOMAIN}`) &&
+    normalized.length > ALLOWED_EMAIL_DOMAIN.length + 1
+  );
+}
+
+function passwordsMatch(receivedPassword) {
+  const expected = Buffer.from(SHARED_PASSWORD);
+  const received = Buffer.from(String(receivedPassword || ""));
+
+  if (!expected.length || expected.length !== received.length) {
+    return false;
+  }
+
+  return crypto.timingSafeEqual(expected, received);
+}
+
+function createAuthSession(email) {
+  const token = crypto.randomBytes(32).toString("hex");
+
+  AUTH_SESSIONS.set(token, {
+    email,
+    createdAt: Date.now(),
+    expiresAt: Date.now() + AUTH_SESSION_TTL_MS
+  });
+
+  return token;
+}
+function getAuthSession(req) {
+  const token = parseCookies(req).sga_nexus_session;
+
+  if (!token) return null;
+
+  const session = AUTH_SESSIONS.get(token);
+
+  if (!session) return null;
+
+  if (session.expiresAt <= Date.now()) {
+    AUTH_SESSIONS.delete(token);
+    return null;
+  }
+
+  return {
+    token,
+    ...session
+  };
+}
+
+function setAuthCookie(res, token) {
+  const cookieParts = [
+    `sga_nexus_session=${encodeURIComponent(token)}`,
+    "HttpOnly",
+    "SameSite=Lax",
+    "Path=/",
+    `Max-Age=${Math.floor(AUTH_SESSION_TTL_MS / 1000)}`
+  ];
+
+  if (process.env.NODE_ENV === "production") {
+    cookieParts.push("Secure");
+  }
+
+  res.setHeader("Set-Cookie", cookieParts.join("; "));
+}
+
+function clearAuthCookie(res) {
+  const cookieParts = [
+    "sga_nexus_session=",
+    "HttpOnly",
+    "SameSite=Lax",
+    "Path=/",
+    "Max-Age=0"
+  ];
+
+  if (process.env.NODE_ENV === "production") {
+    cookieParts.push("Secure");
+  }
+
+  res.setHeader("Set-Cookie", cookieParts.join("; "));
+}
+
+function displayNameFromEmail(email) {
+  const localPart = normalizeEmail(email).split("@")[0] || "SGA User";
+
+  return localPart
+    .split(/[._-]+/)
+    .filter(Boolean)
+    .map(part => part.charAt(0).toUpperCase() + part.slice(1))
+    .join(" ");
+}
+
+function cleanupExpiredAuthSessions() {
+  const currentTime = Date.now();
+
+  for (const [token, session] of AUTH_SESSIONS.entries()) {
+    if (session.expiresAt <= currentTime) {
+      AUTH_SESSIONS.delete(token);
+    }
+  }
+}
+
+const authCleanupTimer = setInterval(
+  cleanupExpiredAuthSessions,
+  15 * 60 * 1000
+);
+
+authCleanupTimer.unref();
+
+
 const server = http.createServer((req, res) => {
-  if (req.method === "GET" && req.url === "/api/status") {
-    sendJson(res, 200, { ok: true, app: "SGA FILE NEXUS", serverExport: true });
+  const requestPath = (req.url || "/").split("?")[0];
+
+
+  if (req.method === "GET" && requestPath === "/api/auth/session") {
+    const session = getAuthSession(req);
+
+    if (!session) {
+      sendJson(res, 200, {
+        authenticated: false
+      });
+      return;
+    }
+
+    sendJson(res, 200, {
+      authenticated: true,
+      user: {
+        email: session.email,
+        name: displayNameFromEmail(session.email),
+        provider: "Firm Password"
+      }
+    });
+
     return;
   }
 
+  if (req.method === "POST" && requestPath === "/api/auth/login") {
+    readJsonBody(req)
+      .then(({ email, password }) => {
+        const normalizedEmail = normalizeEmail(email);
+
+        if (!isAllowedCompanyEmail(normalizedEmail)) {
+          sendJson(res, 403, {
+            error: "Only Sam Garcia Architects employees may access Nexus."
+          });
+          return;
+        }
+
+        if (!SHARED_PASSWORD) {
+          sendJson(res, 503, {
+            error: "The Nexus firm password has not been configured."
+          });
+          return;
+        }
+
+        if (!passwordsMatch(password)) {
+          sendJson(res, 401, {
+            error: "Incorrect firm access password."
+          });
+          return;
+        }
+
+        const token = createAuthSession(normalizedEmail);
+        setAuthCookie(res, token);
+
+        sendJson(res, 200, {
+          authenticated: true,
+          user: {
+            email: normalizedEmail,
+            name: displayNameFromEmail(normalizedEmail),
+            provider: "Firm Password"
+          }
+        });
+      })
+      .catch(error => {
+        sendJson(res, 400, {
+          error: error.message || "Login request could not be processed."
+        });
+      });
+
+    return;
+  }
+
+  if (req.method === "POST" && requestPath === "/api/auth/logout") {
+    const session = getAuthSession(req);
+
+    if (session) {
+      AUTH_SESSIONS.delete(session.token);
+    }
+
+    clearAuthCookie(res);
+
+    sendJson(res, 200, {
+      authenticated: false
+    });
+
+    return;
+  }
+
+  if (req.method === "GET" && requestPath === "/runtime-config.js") {
+    const browserConfig = {
+      qcUrl: PUBLIC_QC_URL,
+      mepUrl: PUBLIC_MEP_URL,
+      coworkerToolUrl: PUBLIC_COWORKER_TOOL_URL
+    };
+
+    send(
+      res,
+      200,
+      {
+        "Content-Type": "text/javascript; charset=utf-8",
+        "Cache-Control": "no-store"
+      },
+      `window.SGA_RUNTIME_CONFIG = ${JSON.stringify(browserConfig)};`
+    );
+
+    return;
+  }
+
+  if (req.method === "GET" && requestPath === "/api/status") {
+    sendJson(res, 200, {
+      ok: true,
+      app: "SGA FILE NEXUS",
+      serverExport: true,
+      services: {
+        nexus: {
+          ready: true
+        }
+      }
+    });
+
+    return;
+  }
   if (req.method === "POST" && req.url === "/api/export-zip") {
     handleServerExport(req, res);
     return;
@@ -276,7 +631,9 @@ async function handleScanFolder(req, res) {
     SCANS.set(scanId, {
       rootPath,
       mainFolderName,
-      files: new Map(files.map(file => [file.path, file]))
+      files: new Map(files.map(file => [file.path, file])),
+      createdAt: Date.now(),
+      lastAccessedAt: Date.now()
     });
 
     sendJson(res, 200, {
@@ -299,6 +656,8 @@ async function handleServerFolderExport(req, res) {
       sendJson(res, 404, { error: "Server scan was not found. Scan the folder again." });
       return;
     }
+
+    scan.lastAccessedAt = Date.now();
 
     const zip = new JSZip();
     for (const folderPath of manifest.emptyFolders || []) {
@@ -331,7 +690,10 @@ async function handlePrepareServerFolderExport(req, res) {
     }
 
     const exportId = crypto.randomUUID();
-    EXPORTS.set(exportId, manifest);
+    EXPORTS.set(exportId, {
+      manifest,
+      createdAt: Date.now()
+    });
     sendJson(res, 200, {
       exportId,
       zipName: sanitizeZipName(manifest.zipName),
@@ -345,8 +707,20 @@ async function handlePrepareServerFolderExport(req, res) {
 async function handleDownloadServerFolderExport(req, res) {
   try {
     const exportId = req.url.split("/").pop();
-    const manifest = EXPORTS.get(exportId);
+    const preparedExport = EXPORTS.get(exportId);
+
+    if (!preparedExport) {
+      sendJson(res, 404, {
+        error: "Prepared export was not found. Export the ZIP again."
+      });
+      return;
+    }
+
+    const manifest = preparedExport.manifest;
+    EXPORTS.delete(exportId);
+
     if (!manifest) {
+
       sendJson(res, 404, { error: "Prepared export was not found. Export the ZIP again." });
       return;
     }
@@ -356,6 +730,8 @@ async function handleDownloadServerFolderExport(req, res) {
       sendJson(res, 404, { error: "Server scan was not found. Scan the folder again." });
       return;
     }
+
+    scan.lastAccessedAt = Date.now();
 
     const zip = new JSZip();
     for (const folderPath of manifest.emptyFolders || []) {

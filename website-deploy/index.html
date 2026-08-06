@@ -13,7 +13,7 @@
     </script>
   </head>
   <body data-tool="home" data-workflow="photos" data-auth="logged-out" data-auth-view="login">
-    
+
     <section id="loginScreen" class="login-screen" aria-label="Login">
       <div class="login-card">
         <a
@@ -28,81 +28,61 @@
         <h1>SGA FILE NEXUS</h1>
 
         <p class="login-copy">
-          Sign in using your Sam Garcia Architects Google Workspace account.
+          Sign in using your Sam Garcia Architects email and the firm access password.
         </p>
 
-        <button
-          id="googleLoginButton"
-          class="google-login-button google-primary-login"
-          type="button"
-        >
-          <span aria-hidden="true">G</span>
-          Continue with Google
-        </button>
+        <form id="loginForm" class="login-form">
+          <label>
+            Email
+            <input
+              id="loginEmail"
+              type="email"
+              autocomplete="username"
+              placeholder="name@samgarciaarchitect.com"
+              required
+            >
+          </label>
 
-        <p class="workspace-login-note">
-          Use your <strong>@samgarciaarchitect.com</strong> work account.
-        </p>
-
-        <details class="temporary-login-access">
-          <summary>Temporary local developer access</summary>
-
-          <p class="temporary-login-copy">
-            Available only while Google Workspace authentication is being configured.
-          </p>
-
-          <form id="loginForm" class="login-form">
-            <label>
-              Email
+          <label>
+            Password
+            <span class="password-field">
               <input
-                id="loginEmail"
-                type="email"
-                autocomplete="email"
-                placeholder="name@samgarciaarchitect.com"
+                id="loginPassword"
+                type="password"
+                autocomplete="current-password"
+                placeholder="Firm access password"
                 required
               >
-            </label>
 
-            <label>
-              Password
-              <span class="password-field">
-                <input
-                  id="loginPassword"
-                  type="password"
-                  autocomplete="current-password"
-                  placeholder="Temporary local password"
-                  required
-                >
+              <button
+                class="show-password-button"
+                type="button"
+                data-toggle-password="loginPassword"
+                aria-pressed="false"
+              >
+                Show
+              </button>
+            </span>
+          </label>
 
-                <button
-                  class="show-password-button"
-                  type="button"
-                  data-toggle-password="loginPassword"
-                >
-                  Show
-                </button>
-              </span>
-            </label>
-
-            <button class="button primary wide" type="submit">
-              Temporary Local Login
-            </button>
-          </form>
-
-          <button
-            id="forgotPasswordButton"
-            class="forgot-password-button"
-            type="button"
-          >
-            Temporary local password reset
+          <button class="button primary wide" type="submit">
+            Login
           </button>
-        </details>
+        </form>
+
+        <button
+          id="forgotPasswordButton"
+          class="forgot-password-button"
+          type="button"
+        >
+          Forgot password?
+        </button>
 
         <p id="loginError" class="login-error" aria-live="polite"></p>
       </div>
     </section>
 
-    
+
     <section id="resetPasswordScreen" class="login-screen reset-password-screen" aria-label="Reset password">
       <div class="login-card">
         <a class="logo-link" href="https://www.samgarciaarchitect.com" aria-label="Open Sam Garcia Architect website">
@@ -306,8 +286,9 @@
       <section id="constructionWorkspace" class="construction-workspace">
         <section class="construction-check-workspace">
           <iframe
+            id="qcIntegrityFrame"
             class="qc-integrity-frame"
-            src="http://127.0.0.1:8006"
+            src="about:blank"
             title="QC Integrity Check"
             loading="eager"
           ></iframe>
@@ -324,18 +305,18 @@
           <div class="pdf-coming-soon">Coming soon!</div>
         </section>
       </section>
-      
+
       <section id="mepAnalysisWorkspace" class="mep-analysis-workspace">
         <iframe
           id="mepAnalysisFrame"
           class="mep-analysis-frame"
-          src="http://127.0.0.1:3000"
+          src="about:blank"
           title="SGA MEP Analysis"
           loading="lazy"
         ></iframe>
       </section>
 
-      
+
       <section id="sgaToolWorkspace" class="tool-workspace">
         <section class="upload-hero">
         <div id="dropZone" class="drop-zone" tabindex="0">
@@ -564,6 +545,7 @@
         document.write('<script src="https://cdn.jsdelivr.net/npm/heic2any@0.0.4/dist/heic2any.min.js"><\/script>');
       }
     </script>
+    <script src="/runtime-config.js"></script>
     <script src="app.js"></script>
     <script src="folder-discarder.js"></script>
   </body>

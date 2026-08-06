@@ -13,6 +13,7 @@ const { projectAvailability, statusCounts } = require('./lib/quality');
 const app = express();
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 25 * 1024 * 1024 } });
 const PORT = process.env.PORT || 3000;
+const HOST = process.env.HOST || "127.0.0.1";
 app.use(express.json({ limit: '25mb' }));
 app.use(express.static(path.join(__dirname, 'public')));
 app.use('/vendor/chart.js', express.static(path.join(__dirname, 'node_modules', 'chart.js', 'dist', 'chart.umd.js')));
@@ -849,5 +850,10 @@ reconcileSquareFeet(copy);
 return copy}
 
 app.use((error,_req,res,_next)=>res.status(error.code==='LIMIT_FILE_SIZE'?413:500).json({error:error.code==='LIMIT_FILE_SIZE'?'File exceeds the 25 MB limit.':'Unexpected local server error.'}));
-if(require.main===module)app.listen(PORT,()=>console.log(`SGA MEP Analyzer is running at http://localhost:${PORT}`));
+if(require.main===module) {
+  app.listen(PORT, HOST, () => {
+    console.log(`SGA MEP Analyzer is running at http://${HOST}:${PORT}`);
+  });
+
+}
 module.exports=app;
