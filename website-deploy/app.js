@@ -233,12 +233,6 @@ function bindEvents() {
       "Please contact the Nexus administrator for the current firm access password.";
   });
   els.backToLoginButton.addEventListener("click", () => setAuthView("login"));
-  document.querySelectorAll("[data-toggle-password]").forEach(button => {
-    button.addEventListener("click", event => {
-      event.preventDefault();
-      togglePasswordVisibility(button);
-    });
-  });
   els.resetPasswordForm.addEventListener("submit", event => {
     event.preventDefault();
     const email = els.resetEmail.value.trim();
