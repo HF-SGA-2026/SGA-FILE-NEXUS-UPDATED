@@ -4,7 +4,7 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>SGA FILE NEXUS</title>
-    <link rel="stylesheet" href="styles.css?v=20260728-local-mode">
+    <link rel="stylesheet" href="styles.css?v=20260806-review-open-reports">
     <script>
       if (window.location.protocol === "file:") {
         window.location.replace(`http://127.0.0.1:8080/folder-discarder/index.html${window.location.search}`);
@@ -47,12 +47,13 @@
             <h2>Scan real local or server path</h2>
           </div>
         </div>
-        <p class="mode-help">Paste a full Windows folder path or network path. Check Path must pass before Scan Folder can run against the backend.</p>
+        <p class="mode-help">Choose a local folder, or paste a full Windows or network path. Check Path must pass before Scan Folder can run against the backend.</p>
         <div class="local-mode-grid">
           <div class="backend-path-field">
             <label class="field-label" for="serverPathInput" title="The exact local or server folder the backend should scan, such as a mapped drive or shared network path.">Full folder path</label>
             <input id="serverPathInput" class="field-control" type="text" autocomplete="off" placeholder="Example: C:\Projects\Active or \\firm-server\share" title="Paste the full local or network folder path to scan.">
           </div>
+          <button id="browseBackendFolderButton" class="button secondary wide" type="button" title="Open the Windows folder picker and fill in the selected local folder path.">Choose Folder</button>
           <button id="checkBackendButton" class="button secondary wide" type="button" title="Checks whether the backend can access this exact folder path.">Check Path</button>
           <button id="scanBackendButton" class="button primary wide" type="button" disabled title="Scans the checked folder path through the backend and loads empty folders into the review list.">Scan Folder</button>
         </div>
@@ -80,8 +81,8 @@
           <div class="drop-copy">
             <p class="mode-label">Browser Review</p>
             <h2>Choose folder for browser scan</h2>
-            <p>Uses browser directory access when available, including empty-folder detection. Upload fallback is scan-only and may miss truly empty folders.</p>
-            <button id="chooseFolderButton" class="inline-folder-choice" type="button" title="Choose a folder using browser directory access when available. Upload fallback may miss truly empty folders.">Choose Folder for Browser Scan</button>
+            <p>Uses the connected local service to select, validate, and scan a Windows folder. Browser-only access is used as a fallback when the local service is unavailable.</p>
+            <button id="chooseFolderButton" class="inline-folder-choice" type="button" title="Choose and immediately scan a folder using Full Local Mode when connected.">Choose Folder for Browser Scan</button>
             <input id="folderInput" class="folder-input" type="file" webkitdirectory directory multiple>
           </div>
         </div>
@@ -115,14 +116,6 @@
               </div>
             </div>
             <div class="field-stack">
-              <label class="field-label" for="presetSelect" title="Quick rule sets for common cleanup reviews. Changing this adjusts the empty-folder, age, and protected-folder rules below.">Workflow preset</label>
-              <select id="presetSelect" class="field-control" title="Choose a saved set of scan rules.">
-                <option value="daily">Daily review</option>
-                <option value="weekly">Weekly cleanup</option>
-                <option value="archive">Archive sweep</option>
-                <option value="clientSafe">Client-safe cleanup</option>
-              </select>
-
               <label class="field-label" for="emptyDefinition" title="Controls what counts as empty. Ignore system files treats folders containing only files like .DS_Store as empty.">Empty definition</label>
               <select id="emptyDefinition" class="field-control" title="Choose whether system files should be ignored or whether folders must be completely blank.">
                 <option value="ignored">Ignore system files</option>
@@ -138,41 +131,10 @@
               </select>
 
               <label class="check-row" title="Keep folders in the review list even when the browser cannot read a reliable modified date.">
-                <input id="includeUnknownDates" type="checkbox" checked>
+                <input id="includeUnknownDates" type="checkbox">
                 <span>Include folders with unknown dates</span>
               </label>
 
-              <label class="field-label" for="protectedRules" title="Any folder path containing one of these words is protected, skipped, and left out of deletion.">Protected folder rules</label>
-              <div id="protectedRules" class="protected-rules" role="group" aria-label="Protected folder rules" title="Select the rules that should protect matching folders from cleanup.">
-                <label class="protected-rule-toggle selected">
-                  <input type="checkbox" value="Archive" checked>
-                  <span>Archive</span>
-                </label>
-                <label class="protected-rule-toggle selected">
-                  <input type="checkbox" value="Templates" checked>
-                  <span>Templates</span>
-                </label>
-                <label class="protected-rule-toggle selected">
-                  <input type="checkbox" value="DO NOT DELETE" checked>
-                  <span>DO NOT DELETE</span>
-                </label>
-                <label class="protected-rule-toggle selected">
-                  <input type="checkbox" value="_Active" checked>
-                  <span>_Active</span>
-                </label>
-                <label class="protected-rule-toggle selected">
-                  <input type="checkbox" value="Client Root" checked>
-                  <span>Client Root</span>
-                </label>
-                <label class="protected-rule-toggle selected">
-                  <input type="checkbox" value="SGA_FILE_NEXUS_QUARANTINE" checked>
-                  <span>SGA File Nexus Quarantine</span>
-                </label>
-                <label class="protected-rule-toggle">
-                  <input type="checkbox" value="Legal Hold">
-                  <span>Legal Hold</span>
-                </label>
-              </div>
             </div>
           </section>
 
@@ -196,27 +158,15 @@
             </div>
             <div class="primary-action-stack">
               <button id="renameButton" class="button primary wide" type="button" disabled title="Refresh the review list using the current scan settings.">Apply Scan Rules</button>
-              <button id="selectReadyButton" class="button wide" type="button" disabled title="Select every ready folder in the current review list. Protected and failed folders are skipped.">Select Ready Only</button>
+              <button id="selectReadyButton" class="button wide" type="button" disabled title="Select every ready folder in the current review list. Failed folders are skipped.">Select Ready Only</button>
               <button id="discardButton" class="button success wide" type="button" disabled title="Remove the selected ready folders after approval and confirmation.">Discard Selected</button>
-              <button id="downloadButton" class="button wide" type="button" disabled title="Download a CSV audit report showing what was reviewed, protected, failed, or discarded.">Download CSV Report</button>
+              <button id="downloadButton" class="button wide" type="button" disabled title="Download a CSV audit report showing what was reviewed, failed, or discarded.">Download CSV Report</button>
               <div class="button-row report-actions">
                 <button id="downloadWorkbookButton" class="button compact" type="button" disabled title="Download an Excel-friendly workbook report. Discarded rows are highlighted.">Workbook</button>
                 <button id="downloadPdfButton" class="button compact" type="button" disabled title="Open a print-ready report that can be saved as PDF. Discarded rows are highlighted.">PDF</button>
               </div>
             </div>
             <p id="zipInfo" class="zip-info muted">Audit report will be available after scanning.</p>
-            <div class="review-bin" aria-live="polite">
-              <div class="review-bin-heading">
-                <span>Review Bin</span>
-                <strong id="reviewBinCount">0</strong>
-              </div>
-              <p id="reviewBinSummary" class="muted">Selected ready folders appear here before cleanup.</p>
-              <div class="button-row review-bin-actions">
-                <button id="copySelectedPathsButton" class="button compact" type="button" disabled title="Copy every selected folder path at once.">Copy Paths</button>
-                <button id="clearReviewBinButton" class="button compact" type="button" disabled title="Clear every selected folder from the Review Bin.">Clear Bin</button>
-              </div>
-              <div id="reviewBinList" class="review-bin-list"></div>
-            </div>
           </section>
 
           <section class="panel log-panel">
@@ -242,14 +192,12 @@
             <div id="reviewSummaryStrip" class="summary-strip" aria-live="polite">
               <span><strong>0</strong> Ready</span>
               <span><strong>0</strong> Selected</span>
-              <span><strong>0</strong> Protected</span>
               <span><strong>0</strong> Failed</span>
               <span><strong>0</strong> Backup planned</span>
             </div>
             <div class="status-legend" aria-label="Review status legend">
               <span class="legend-ready">Ready</span>
               <span class="legend-selected">Selected</span>
-              <span class="legend-protected">Protected</span>
               <span class="legend-failed">Failed</span>
               <span class="legend-backed">Backed Up</span>
             </div>
@@ -258,7 +206,6 @@
               <select id="statusFilter" class="field-control" title="Filter by cleanup status. Discarded folders are removed from the list and kept in the audit report.">
                 <option value="all">All statuses</option>
                 <option value="ready">Ready</option>
-                <option value="protected">Protected</option>
                 <option value="failed">Failed</option>
               </select>
               <button id="selectVisibleButton" class="button compact" type="button" disabled title="Select every ready folder currently visible after search and status filters.">Select Visible</button>
@@ -268,11 +215,11 @@
               <table>
                 <thead>
                   <tr>
-                    <th title="Check folders you want to discard. Protected and failed folders cannot be selected.">Use</th>
+                    <th title="Check folders you want to discard. Failed folders cannot be selected.">Use</th>
                     <th title="The top-level parent group detected inside the selected server folder.">Parent folder</th>
                     <th title="The folder being reviewed. Use Copy/Open to verify the path before cleanup.">Folder path</th>
                     <th title="The last modified date when the browser or backend can read it. Backend scans provide the most reliable folder dates.">Last modified</th>
-                    <th title="Ready can be discarded. Protected is blocked by rules. Failed means cleanup could not complete.">Status</th>
+                    <th title="Ready can be discarded. Failed means cleanup could not complete.">Status</th>
                   </tr>
                 </thead>
                 <tbody id="previewBody">
@@ -309,7 +256,6 @@
                 <div><strong id="elapsedTime">00:00</strong><span>Elapsed time</span></div>
                 <div><strong id="etaTime">--:--</strong><span>Estimated time remaining</span></div>
                 <div><strong id="filesPerSecond">0.0</strong><span>Folders per second</span></div>
-                <div><strong id="heicSpeed">0</strong><span>Protected skipped</span></div>
               </div>
             </div>
           </section>
@@ -317,92 +263,9 @@
       </section>
       </section>
 
-      <section id="hygieneTabPanel" class="tab-panel" hidden>
-        <section class="hygiene-layout">
-          <section class="panel hygiene-summary-panel">
-            <div class="section-heading">
-              <div>
-                <p class="eyebrow">Scan-only</p>
-                <h2>Architecture Hygiene Scan</h2>
-              </div>
-              <span id="hygieneCount" class="pill">0 flags</span>
-            </div>
-            <p id="hygieneSummary" class="folder-summary muted">Load a folder to generate a general hygiene scan. This tab does not delete, discard, quarantine, or move anything.</p>
-            <div id="hygieneSummaryStrip" class="summary-strip">
-              <span><strong>0</strong> Attention</span>
-              <span><strong>0</strong> Review</span>
-              <span><strong>0</strong> Protected</span>
-              <span><strong>0</strong> Info</span>
-            </div>
-            <div class="hygiene-cards" aria-label="Architecture hygiene scan categories">
-              <div>
-                <span>01</span>
-                <strong>Empty and System-only Folders</strong>
-                <p>Flags folders that are empty or only contain ignored system files.</p>
-              </div>
-              <div>
-                <span>02</span>
-                <strong>Inactive Project Areas</strong>
-                <p>Highlights folders with older modified dates for archive review.</p>
-              </div>
-              <div>
-                <span>03</span>
-                <strong>Backup and Temp Files</strong>
-                <p>Surfaces common backup, autosave, and temporary file patterns.</p>
-              </div>
-              <div>
-                <span>04</span>
-                <strong>Repeated Names and Large Files</strong>
-                <p>Shows repeated folder names and oversized files for manual review.</p>
-              </div>
-            </div>
-          </section>
-
-          <section class="panel hygiene-panel">
-            <div class="section-heading">
-              <div>
-                <p class="eyebrow">General Review</p>
-                <h2>Hygiene Flags</h2>
-              </div>
-            </div>
-            <div class="review-toolbar hygiene-toolbar">
-              <input id="hygieneSearchInput" class="field-control" type="search" placeholder="Search hygiene flags" title="Filter hygiene flags by type, folder path, recommendation, or detail.">
-              <select id="hygieneStatusFilter" class="field-control" title="Filter hygiene scan flags by status.">
-                <option value="all">All statuses</option>
-                <option value="attention">Attention</option>
-                <option value="review">Review</option>
-                <option value="protected">Protected</option>
-                <option value="info">Info</option>
-              </select>
-            </div>
-            <div class="table-wrap hygiene-table-wrap">
-              <table>
-                <thead>
-                  <tr>
-                    <th>Type</th>
-                    <th>Item</th>
-                    <th>Recommendation</th>
-                    <th>Status</th>
-                    <th>Details</th>
-                  </tr>
-                </thead>
-                <tbody id="hygieneBody">
-                  <tr>
-                    <td>System-only folder</td>
-                    <td>Example / Project / Empty Uploads</td>
-                    <td>Review as a low-risk cleanup candidate in the cleanup tab.</td>
-                    <td><span class="row-status review">review</span></td>
-                    <td>Example only. Load a folder to generate real scan results.</td>
-                  </tr>
-                </tbody>
-              </table>
-            </div>
-          </section>
-        </section>
-      </section>
     </main>
 
     <script src="config.js?v=20260728-local-mode"></script>
-    <script src="app.js?v=20260728-picker-restore"></script>
+    <script src="app.js?v=20260806-native-folder-scan"></script>
   </body>
 </html>

@@ -4,38 +4,6 @@ const REPORT_MIME = "text/csv;charset=utf-8";
 const QUARANTINE_FOLDER = "SGA_FILE_NEXUS_QUARANTINE";
 const BACKEND_URL_STORAGE_KEY = "sgaFileNexusBackendUrl";
 
-const DEFAULT_PROTECTED_RULES = [
-  "Archive",
-  "Templates",
-  "DO NOT DELETE",
-  "_Active",
-  "Client Root",
-  QUARANTINE_FOLDER
-].join("\n");
-
-const PRESETS = {
-  daily: {
-    emptyDefinition: "ignored",
-    ageFilter: "0",
-    protectedRules: DEFAULT_PROTECTED_RULES
-  },
-  weekly: {
-    emptyDefinition: "ignored",
-    ageFilter: "30",
-    protectedRules: DEFAULT_PROTECTED_RULES
-  },
-  archive: {
-    emptyDefinition: "ignored",
-    ageFilter: "90",
-    protectedRules: ["DO NOT DELETE", "_Active", "Legal Hold", "Client Root", QUARANTINE_FOLDER].join("\n")
-  },
-  clientSafe: {
-    emptyDefinition: "strict",
-    ageFilter: "60",
-    protectedRules: ["Archive", "Templates", "DO NOT DELETE", "_Active", "Legal Hold", "Client Root", QUARANTINE_FOLDER].join("\n")
-  }
-};
-
 const state = {
   sourceKind: "",
   sourceLabel: "",
@@ -52,9 +20,6 @@ const state = {
   filteredRows: [],
   selectedFolders: new Set(),
   selectedPreviewPath: "",
-  activeTab: "cleanup",
-  hygieneRows: [],
-  filteredHygieneRows: [],
   processedRows: new Set(),
   discardedRows: [],
   failures: [],
@@ -90,27 +55,14 @@ const els = {
   downloadPdfButton: document.getElementById("downloadPdfButton"),
   clearLogButton: document.getElementById("clearLogButton"),
   cleanupTabButton: document.getElementById("cleanupTabButton"),
-  hygieneTabButton: document.getElementById("hygieneTabButton"),
   cleanupTabPanel: document.getElementById("cleanupTabPanel"),
-  hygieneTabPanel: document.getElementById("hygieneTabPanel"),
   parentList: document.getElementById("parentList"),
   folderSummary: document.getElementById("folderSummary"),
   previewBody: document.getElementById("previewBody"),
   reviewSummaryStrip: document.getElementById("reviewSummaryStrip"),
   selectedActionCount: document.getElementById("selectedActionCount"),
-  reviewBinCount: document.getElementById("reviewBinCount"),
-  reviewBinSummary: document.getElementById("reviewBinSummary"),
-  reviewBinList: document.getElementById("reviewBinList"),
-  copySelectedPathsButton: document.getElementById("copySelectedPathsButton"),
-  clearReviewBinButton: document.getElementById("clearReviewBinButton"),
   previewDetail: document.getElementById("previewDetail"),
   previewCount: document.getElementById("previewCount"),
-  hygieneCount: document.getElementById("hygieneCount"),
-  hygieneSummary: document.getElementById("hygieneSummary"),
-  hygieneSummaryStrip: document.getElementById("hygieneSummaryStrip"),
-  hygieneSearchInput: document.getElementById("hygieneSearchInput"),
-  hygieneStatusFilter: document.getElementById("hygieneStatusFilter"),
-  hygieneBody: document.getElementById("hygieneBody"),
   messageLog: document.getElementById("messageLog"),
   statusText: document.getElementById("statusText"),
   percentText: document.getElementById("percentText"),
@@ -121,17 +73,14 @@ const els = {
   elapsedTime: document.getElementById("elapsedTime"),
   etaTime: document.getElementById("etaTime"),
   filesPerSecond: document.getElementById("filesPerSecond"),
-  heicSpeed: document.getElementById("heicSpeed"),
   zipInfo: document.getElementById("zipInfo"),
   modeBanner: document.getElementById("modeBanner"),
   modeBannerLabel: document.getElementById("modeBannerLabel"),
   modeBannerText: document.getElementById("modeBannerText"),
   libraryStatus: document.getElementById("libraryStatus"),
-  presetSelect: document.getElementById("presetSelect"),
   emptyDefinition: document.getElementById("emptyDefinition"),
   ageFilter: document.getElementById("ageFilter"),
   includeUnknownDates: document.getElementById("includeUnknownDates"),
-  protectedRules: document.getElementById("protectedRules"),
   quarantineOption: document.getElementById("quarantineOption"),
   approvalCheck: document.getElementById("approvalCheck"),
   searchInput: document.getElementById("searchInput"),
@@ -141,6 +90,7 @@ const els = {
   backendUrl: document.getElementById("backendUrl"),
   backendKey: document.getElementById("backendKey"),
   serverPathInput: document.getElementById("serverPathInput"),
+  browseBackendFolderButton: document.getElementById("browseBackendFolderButton"),
   checkBackendButton: document.getElementById("checkBackendButton"),
   scanBackendButton: document.getElementById("scanBackendButton"),
   cancelBackendButton: document.getElementById("cancelBackendButton"),
@@ -153,7 +103,6 @@ document.addEventListener("DOMContentLoaded", () => {
   initBackendFields();
   bindEvents();
   updateLibraryStatus();
-  applyPreset("daily", false);
   resetUi();
   detectBackendAvailability();
   startEmbeddedSizing();
@@ -183,8 +132,15 @@ function bindEvents() {
     event.stopPropagation();
     if (state.processing) return;
 
+    if (state.backendAvailable && !window.location.hostname.endsWith(".github.io")) {
+      await browseBackendFolder(true);
+      return;
+    }
+
     if (window.showDirectoryPicker) {
-      await chooseServerFolder();
+      setStatus("Opening browser folder picker...", "loading");
+      addLog("Choose a folder to begin the browser scan.", "info");
+      await chooseBrowserFolder();
       return;
     }
 
@@ -234,8 +190,7 @@ function bindEvents() {
   els.downloadButton.addEventListener("click", downloadReport);
   els.downloadWorkbookButton.addEventListener("click", downloadWorkbookReport);
   els.downloadPdfButton.addEventListener("click", downloadPdfReport);
-  els.cleanupTabButton.addEventListener("click", () => switchTab("cleanup"));
-  els.hygieneTabButton?.addEventListener("click", () => switchTab("hygiene"));
+  els.browseBackendFolderButton.addEventListener("click", () => browseBackendFolder(false));
   els.checkBackendButton.addEventListener("click", checkBackendPath);
   els.scanBackendButton.addEventListener("click", () => scanBackendFolder(true));
   els.cancelBackendButton.addEventListener("click", cancelBackendOperation);
@@ -255,15 +210,9 @@ function bindEvents() {
     els.messageLog.innerHTML = "";
   });
 
-  els.presetSelect.addEventListener("change", () => applyPreset(els.presetSelect.value, true));
   els.emptyDefinition.addEventListener("change", handleRuleChange);
   els.ageFilter.addEventListener("change", handleRuleChange);
   els.includeUnknownDates.addEventListener("change", handleRuleChange);
-  els.protectedRules.addEventListener("change", event => {
-    if (!event.target.matches('input[type="checkbox"]')) return;
-    updateProtectedRuleStates();
-    handleRuleChange();
-  });
   els.quarantineOption.addEventListener("change", () => {
     renderPreview();
     updateControls();
@@ -273,10 +222,6 @@ function bindEvents() {
   els.statusFilter.addEventListener("change", renderPreview);
   els.selectVisibleButton.addEventListener("click", () => setVisibleRowsSelected(true));
   els.clearVisibleButton.addEventListener("click", () => setVisibleRowsSelected(false));
-  els.copySelectedPathsButton.addEventListener("click", copySelectedPaths);
-  els.clearReviewBinButton.addEventListener("click", clearReviewBin);
-  els.hygieneSearchInput.addEventListener("input", renderHygieneScan);
-  els.hygieneStatusFilter.addEventListener("change", renderHygieneScan);
 }
 
 function initBackendFields() {
@@ -294,20 +239,6 @@ function updateLibraryStatus() {
     els.libraryStatus.textContent = "SCAN-ONLY FALLBACK READY";
     els.libraryStatus.className = "library-status warn";
   }
-}
-
-function switchTab(tabName) {
-  state.activeTab = tabName;
-  const showHygiene = tabName === "hygiene";
-  els.cleanupTabButton.classList.toggle("active", !showHygiene);
-  els.hygieneTabButton?.classList.toggle("active", showHygiene);
-  els.cleanupTabButton.setAttribute("aria-selected", String(!showHygiene));
-  els.hygieneTabButton?.setAttribute("aria-selected", String(showHygiene));
-  els.cleanupTabPanel.hidden = showHygiene;
-  els.hygieneTabPanel.hidden = !showHygiene;
-  els.cleanupTabPanel.classList.toggle("active", !showHygiene);
-  els.hygieneTabPanel.classList.toggle("active", showHygiene);
-  if (showHygiene) renderHygieneScan();
 }
 
 async function detectBackendAvailability() {
@@ -339,6 +270,51 @@ async function detectBackendAvailability() {
     updateModeBanner("preview");
     els.backendStatus.textContent = `Full Local Mode not connected: ${error.message}`;
     updateControls();
+  }
+}
+
+async function browseBackendFolder(autoScan = false) {
+  if (state.processing) return;
+  let shouldScan = false;
+  state.processing = true;
+  updateControls();
+  setStatus("Opening folder picker...", "loading");
+  els.backendStatus.textContent = "Choose the folder that should be scanned.";
+  addLog("Opening the Windows folder picker...", "info");
+
+  try {
+    const result = await backendRequest("/api/select-folder", { method: "POST" });
+    if (!result.rootPath) {
+      setStatus("Folder selection canceled.", "neutral");
+      els.backendStatus.textContent = "No folder was selected.";
+      return;
+    }
+    els.serverPathInput.value = result.rootPath;
+    state.backendAvailable = true;
+    state.backendPathReady = true;
+    state.checkedBackendPath = pathKey(result.rootPath);
+    state.backendRootPath = result.rootPath;
+    updateModeBanner("full");
+    els.backendStatus.textContent = `Folder selected and checked: ${result.rootPath}`;
+    els.localModeStats.textContent = "Path is accessible. Scan Folder is ready.";
+    setStatus("Folder ready for scan.", "success");
+    addLog(`Folder selected: ${result.rootPath}`, "success");
+    shouldScan = autoScan;
+  } catch (error) {
+    console.error("Folder picker failed:", error);
+    if (looksLikeBackendUnavailable(error)) state.backendAvailable = false;
+    state.backendPathReady = false;
+    state.checkedBackendPath = "";
+    els.backendStatus.textContent = `Folder selection failed: ${error.message}`;
+    setStatus("Folder selection failed.", "error");
+    addLog(`Folder selection failed: ${error.message}`, "error");
+  } finally {
+    state.processing = false;
+    updateControls();
+  }
+
+  if (shouldScan) {
+    await scanBackendFolder(true);
   }
 }
 
@@ -474,8 +450,6 @@ function loadBackendScan(scan) {
   renderPreview();
   resetRunMetrics();
   buildReport();
-  buildHygieneScan();
-  renderHygieneScan();
   updateFolderSummary();
   setStatus("Finished");
 }
@@ -498,8 +472,7 @@ function settingsPayload() {
   return {
     emptyDefinition: els.emptyDefinition.value,
     ageFilter: Number(els.ageFilter.value || 0),
-    includeUnknownDates: els.includeUnknownDates.checked,
-    protectedRules: protectedPatterns()
+    includeUnknownDates: els.includeUnknownDates.checked
   };
 }
 
@@ -637,60 +610,30 @@ async function restoreLatestQuarantine() {
   }
 }
 
-function applyPreset(name, shouldApplyRules) {
-  const preset = PRESETS[name] || PRESETS.daily;
-  els.emptyDefinition.value = preset.emptyDefinition;
-  els.ageFilter.value = preset.ageFilter;
-  setProtectedRules(preset.protectedRules);
-  if (shouldApplyRules) {
-    applyScanRules();
-    addLog(`${els.presetSelect.options[els.presetSelect.selectedIndex].text} preset applied.`);
-  }
-}
-
-function setProtectedRules(ruleText) {
-  const selectedRules = new Set(String(ruleText || "")
-    .split(/[\n,]+/)
-    .map(rule => rule.trim())
-    .filter(Boolean)
-    .map(rule => rule.toLowerCase()));
-
-  els.protectedRules.querySelectorAll('input[type="checkbox"]').forEach(input => {
-    input.checked = selectedRules.has(input.value.toLowerCase());
-  });
-  updateProtectedRuleStates();
-}
-
-function updateProtectedRuleStates() {
-  els.protectedRules.querySelectorAll(".protected-rule-toggle").forEach(label => {
-    const input = label.querySelector('input[type="checkbox"]');
-    label.classList.toggle("selected", Boolean(input?.checked));
-  });
-}
-
-async function chooseServerFolder() {
+async function chooseBrowserFolder() {
   try {
     const handle = await window.showDirectoryPicker({ mode: "readwrite" });
-    setStatus(`Folder selected: ${handle.name}. Checking access...`, "loading");
+    setStatus(`Folder selected: ${handle.name}. Starting browser scan...`, "loading");
     addLog(`Folder selected: ${handle.name}. Starting scan...`, "loading");
-    const permission = await requestFolderPermission(handle);
-    await loadDirectoryHandle(handle, permission === "granted");
+    await yieldToBrowser();
+    await loadDirectoryHandle(handle, true);
   } catch (error) {
     if (error.name === "AbortError") {
       setStatus("Folder selection canceled.", "neutral");
       return;
     }
+    console.error("Browser folder picker failed:", error);
     setStatus("Folder access failed.", "error");
     addLog(`Folder access failed: ${error.message}`, "error");
   }
 }
 
-async function requestFolderPermission(handle) {
+async function requestFolderPermission(handle, mode = "readwrite") {
   if (!handle.queryPermission || !handle.requestPermission) {
     return "prompt";
   }
 
-  const options = { mode: "readwrite" };
+  const options = { mode };
   try {
     const current = await handle.queryPermission(options);
     if (current === "granted") return current;
@@ -726,21 +669,20 @@ async function loadDirectoryHandle(rootHandle, hasWriteAccess) {
   }
 }
 
-async function scanDirectoryHandle(dirHandle, currentPath, parentPath, parentHandle) {
+async function scanDirectoryHandle(dirHandle, currentPath, parentPath, parentHandle, scanProgress = { count: 0 }) {
   const directory = ensureDirectory(currentPath, { handle: dirHandle, parentPath, parentHandle });
-  let scanned = 0;
 
   for await (const [name, handle] of dirHandle.entries()) {
     const childPath = pathJoin(currentPath, name);
     if (handle.kind === "directory") {
       directory.childDirs.add(childPath);
-      await scanDirectoryHandle(handle, childPath, currentPath, dirHandle);
+      await scanDirectoryHandle(handle, childPath, currentPath, dirHandle, scanProgress);
     } else if (handle.kind === "file") {
       const file = await handle.getFile();
       addScannedFile(file, childPath, { handle, parentHandle: dirHandle });
     }
-    scanned += 1;
-    if (scanned % 40 === 0) {
+    scanProgress.count += 1;
+    if (scanProgress.count % 40 === 0) {
       setStatus(`Scanning folders... ${state.directories.size} folders`, "loading");
       await yieldToBrowser();
     }
@@ -936,8 +878,7 @@ function rebuildParentFolders() {
       state.parentFolders.set(parent, {
         name: parent,
         folderCount: 0,
-        emptyCount: 0,
-        protectedCount: 0
+        emptyCount: 0
       });
     }
     state.parentFolders.get(parent).folderCount += 1;
@@ -979,8 +920,6 @@ function applyScanRules() {
   resetRunMetrics();
   updateFolderSummary();
   buildReport();
-  buildHygieneScan();
-  renderHygieneScan();
   updateControls();
 }
 
@@ -1007,7 +946,6 @@ function computeDirectoryAggregates() {
 
 function buildReviewRows() {
   const rows = [];
-  const patterns = protectedPatterns();
   const strictMode = els.emptyDefinition.value === "strict";
   const minAgeDays = Number(els.ageFilter.value || 0);
   const includeUnknownDates = els.includeUnknownDates.checked;
@@ -1017,15 +955,15 @@ function buildReviewRows() {
     if (parts.length < 2) continue;
 
     const parent = parts[1];
-    const protectedReason = protectedReasonForPath(directory.path, patterns);
     const strictEmpty = directory.files.length === 0 && directory.childDirs.size === 0;
     const ignoredEmpty = directory.subtreeUsableFileCount === 0;
     const qualifies = strictMode ? strictEmpty : ignoredEmpty;
     if (!qualifies) continue;
 
     const age = ageStatus(directory.lastModified, minAgeDays, includeUnknownDates);
-    const status = protectedReason || !age.ok ? "protected" : "ready";
-    const reason = protectedReason || age.reason || emptyReason(directory, strictMode);
+    if (!age.ok) continue;
+    const status = "ready";
+    const reason = age.reason || emptyReason(directory, strictMode);
 
     rows.push({
       path: directory.path,
@@ -1051,14 +989,12 @@ function buildReviewRows() {
 function syncParentCounts() {
   for (const parent of state.parentFolders.values()) {
     parent.emptyCount = 0;
-    parent.protectedCount = 0;
   }
 
   for (const row of state.allReviewRows) {
     const parent = state.parentFolders.get(row.parent);
     if (!parent) continue;
     if (row.status === "ready") parent.emptyCount += 1;
-    if (row.status === "protected") parent.protectedCount += 1;
   }
 }
 
@@ -1066,7 +1002,7 @@ function renderParentList() {
   els.parentList.innerHTML = "";
 
   const visibleParents = [...state.parentFolders.values()]
-    .filter(parent => parent.emptyCount || parent.protectedCount)
+    .filter(parent => parent.emptyCount)
     .sort((a, b) => a.name.localeCompare(b.name));
 
   if (!visibleParents.length) {
@@ -1082,7 +1018,7 @@ function renderParentList() {
     label.innerHTML = `
       <input type="checkbox" id="${id}" ${state.selectedParents.has(parent.name) ? "checked" : ""}>
       <span class="parent-name"></span>
-      <span class="parent-meta">${parent.folderCount} folders, ${parent.emptyCount} ready, ${parent.protectedCount} protected</span>
+      <span class="parent-meta">${parent.folderCount} folders, ${parent.emptyCount} ready</span>
     `;
     label.querySelector(".parent-name").textContent = parent.name;
     label.querySelector("input").addEventListener("change", event => {
@@ -1121,7 +1057,6 @@ function renderPreview() {
       ? '<tr><td colspan="5" class="empty-state">No empty folders remain in the review list. Discarded folders are saved in the audit report.</td></tr>'
       : `<tr><td colspan="5" class="empty-state">${escapeHtml(emptyReviewMessage())}</td></tr>`;
     renderReviewSummary();
-    renderReviewBin();
     renderPreviewDetail(null);
     updateControls();
     return;
@@ -1130,7 +1065,6 @@ function renderPreview() {
   if (!state.filteredRows.length) {
     els.previewBody.innerHTML = '<tr><td colspan="5" class="empty-state">No folders match the current search or status filter.</td></tr>';
     renderReviewSummary();
-    renderReviewBin();
     renderPreviewDetail(null);
     updateControls();
     return;
@@ -1166,7 +1100,6 @@ function renderPreview() {
       resetRunMetrics();
       buildReport();
       renderReviewSummary();
-      renderReviewBin();
       updateControls();
       renderPreview();
     });
@@ -1198,7 +1131,6 @@ function renderPreview() {
   const previewRow = state.filteredRows.find(row => row.path === state.selectedPreviewPath) || state.filteredRows[0];
   state.selectedPreviewPath = previewRow?.path || "";
   renderReviewSummary();
-  renderReviewBin();
   renderPreviewDetail(previewRow || null);
   updateControls();
 }
@@ -1233,13 +1165,11 @@ function toggleRowSelection(row) {
 function renderReviewSummary() {
   const ready = state.reviewRows.filter(row => statusForRow(row) === "ready").length;
   const selected = state.reviewRows.filter(row => state.selectedFolders.has(row.path) && row.canDiscard).length;
-  const protectedCount = state.reviewRows.filter(row => statusForRow(row) === "protected").length;
   const failed = state.reviewRows.filter(row => statusForRow(row) === "failed").length;
   const backupPlanned = els.quarantineOption.checked ? selected : 0;
   els.reviewSummaryStrip.innerHTML = `
     <span><strong>${ready}</strong> Ready</span>
     <span class="summary-selected"><strong>${selected}</strong> Selected</span>
-    <span><strong>${protectedCount}</strong> Protected</span>
     <span><strong>${failed}</strong> Failed</span>
     <span><strong>${backupPlanned}</strong> Backup planned</span>
   `;
@@ -1488,6 +1418,12 @@ async function discardSelectedFolders() {
   }
 
   state.processing = false;
+
+  if (!state.failures.length) {
+    resetAfterSuccessfulCleanup(`Cleanup successful. ${compressedTargets.length} empty folder${compressedTargets.length === 1 ? "" : "s"} discarded.`);
+    return;
+  }
+
   setStatus(state.failures.length ? "Cleanup finished with failures." : "Cleanup finished.", state.failures.length ? "warn" : "success");
   updateMetrics(true);
   syncParentCounts();
@@ -1526,8 +1462,9 @@ async function discardSelectedFoldersWithBackend(selectedRows) {
   setStatus(els.quarantineOption.checked ? "Backend quarantining..." : "Backend discarding...", "loading");
   addLog("Backend cleanup started.", "loading");
 
+  let result = null;
   try {
-    const result = await backendRequest("/api/discard", {
+    result = await backendRequest("/api/discard", {
       method: "POST",
       body: {
         rootPath: state.backendRootPath || els.serverPathInput.value.trim(),
@@ -1561,6 +1498,14 @@ async function discardSelectedFoldersWithBackend(selectedRows) {
     addLog(`Backend cleanup failed: ${error.message}`, "error");
   } finally {
     state.processing = false;
+  }
+
+  if (result && !result.failures?.length) {
+    resetAfterSuccessfulCleanup(result.message || `Cleanup successful. ${result.processed?.length || 0} empty folder${result.processed?.length === 1 ? "" : "s"} discarded.`);
+    return;
+  }
+
+  if (result) {
     syncParentCounts();
     renderParentList();
     updateFolderSummary();
@@ -1569,6 +1514,14 @@ async function discardSelectedFoldersWithBackend(selectedRows) {
     resetRunMetrics();
     updateControls();
   }
+}
+
+function resetAfterSuccessfulCleanup(message) {
+  clearWorkingState();
+  resetUi();
+  els.messageLog.innerHTML = "";
+  setStatus("Cleanup successful.", "success");
+  addLog(message, "success");
 }
 
 function compressTargets(rows) {
@@ -1674,7 +1627,6 @@ function buildReport() {
     "generated_at",
     "app",
     "source",
-    "preset",
     "empty_definition",
     "age_filter_days",
     "quarantine_selected",
@@ -1693,7 +1645,6 @@ function buildReport() {
       generatedAt,
       "SGA FILE NEXUS",
       state.sourceLabel,
-      els.presetSelect.options[els.presetSelect.selectedIndex].text,
       els.emptyDefinition.options[els.emptyDefinition.selectedIndex].text,
       els.ageFilter.value,
       els.quarantineOption.checked ? "yes" : "no",
@@ -1735,38 +1686,133 @@ function downloadReport() {
   addLog("Audit report download started.");
 }
 
-function downloadWorkbookReport() {
+async function downloadWorkbookReport() {
   if (!state.reportBlob) {
     addLog("No workbook report is ready yet. Scan a folder first.", "warn");
     return;
   }
 
-  const html = reportHtmlDocument("workbook");
-  const blob = new Blob([html], { type: "application/vnd.ms-excel;charset=utf-8" });
-  triggerBlobDownload(blob, `${safeFileName(state.mainFolderName || "SGA_FILE_NEXUS")}_empty_folder_audit.xls`);
-  addLog("Workbook report download started.");
+  const rows = reportTableRows();
+  const worksheetRows = rows.map(row => `<Row>${row.map(value => `<Cell><Data ss:Type="String">${escapeXml(value)}</Data></Cell>`).join("")}</Row>`).join("");
+  const workbook = `<?xml version="1.0"?>
+<?mso-application progid="Excel.Sheet"?>
+<Workbook xmlns="urn:schemas-microsoft-com:office:spreadsheet" xmlns:ss="urn:schemas-microsoft-com:office:spreadsheet">
+  <Worksheet ss:Name="Empty Folder Audit"><Table>${worksheetRows}</Table></Worksheet>
+</Workbook>`;
+  const fileName = `${safeFileName(state.mainFolderName || "SGA_FILE_NEXUS")}_empty_folder_audit.xml`;
+  try {
+    await downloadGeneratedReport(workbook, "application/vnd.ms-excel", fileName);
+    addLog("Workbook report downloaded.", "success");
+  } catch (error) {
+    addLog(`Workbook report failed: ${error.message}`, "error");
+  }
 }
 
-function downloadPdfReport() {
+async function downloadPdfReport() {
   if (!state.reportBlob) {
     addLog("No PDF report is ready yet. Scan a folder first.", "warn");
     return;
   }
 
-  const reportWindow = window.open("", "_blank", "noopener");
-  if (!reportWindow) {
-    addLog("PDF report window was blocked. Allow pop-ups, then try PDF again.", "warn");
+  const fileName = `${safeFileName(state.mainFolderName || "SGA_FILE_NEXUS")}_empty_folder_audit.pdf`;
+  try {
+    await downloadGeneratedReport(buildPdfDocument(), "application/pdf", fileName);
+    addLog("PDF report downloaded.", "success");
+  } catch (error) {
+    addLog(`PDF report failed: ${error.message}`, "error");
+  }
+}
+
+async function downloadGeneratedReport(content, contentType, fileName) {
+  if (state.backendAvailable && !window.location.hostname.endsWith(".github.io")) {
+    const prepared = await backendRequest("/api/report", {
+      method: "POST",
+      body: { content, contentType, fileName }
+    });
+    const baseUrl = els.backendUrl.value.trim().replace(/\/+$/, "");
+    triggerUrlDownload(`${baseUrl}${prepared.downloadUrl}`, fileName);
     return;
   }
+  triggerBlobDownload(new Blob([content], { type: contentType }), fileName);
+}
 
-  reportWindow.document.open();
-  reportWindow.document.write(reportHtmlDocument("pdf"));
-  reportWindow.document.close();
-  reportWindow.focus();
-  window.setTimeout(() => {
-    reportWindow.print();
-  }, 250);
-  addLog("PDF report opened. Choose Save as PDF in the print dialog.");
+function triggerUrlDownload(url, fileName) {
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = fileName;
+  link.style.display = "none";
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+}
+
+function reportTableRows() {
+  const generatedAt = new Date().toLocaleString();
+  const headers = ["Generated", "Source", "Parent", "Folder Path", "Copyable Path", "Last Modified", "Status", "Selected", "Reason"];
+  const rows = [...state.reviewRows, ...state.discardedRows].map(row => [
+    generatedAt,
+    state.sourceLabel,
+    row.parent || "",
+    row.path,
+    absolutePathForRow(row),
+    formatDate(row.lastModified),
+    row.reportStatus || statusForRow(row),
+    state.selectedFolders.has(row.path) ? "yes" : "no",
+    failureForPath(row.path)?.message || row.reason || ""
+  ]);
+  return [headers, ...rows];
+}
+
+function escapeXml(value) {
+  return String(value ?? "")
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&apos;");
+}
+
+function buildPdfDocument() {
+  const textRows = reportTableRows();
+  const lines = [
+    "SGA FILE NEXUS - EMPTY FOLDER AUDIT",
+    `${state.mainFolderName || "Selected folder"} | ${new Date().toLocaleString()}`,
+    "",
+    ...textRows.map(row => row.join(" | "))
+  ].map(line => String(line).replace(/[^\x20-\x7e]/g, "?").slice(0, 150));
+  const pages = [];
+  for (let index = 0; index < lines.length; index += 42) pages.push(lines.slice(index, index + 42));
+  if (!pages.length) pages.push(["No report rows."]);
+
+  const objects = [null, "", "", "<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>"];
+  const pageIds = [];
+  pages.forEach(pageLines => {
+    const pageId = objects.length;
+    const contentId = pageId + 1;
+    pageIds.push(pageId);
+    objects.push(`<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 3 0 R >> >> /Contents ${contentId} 0 R >>`);
+    const commands = pageLines.map(line => `(${pdfText(line)}) Tj T*`).join("\n");
+    const stream = `BT\n/F1 8 Tf\n40 752 Td\n11 TL\n${commands}\nET`;
+    objects.push(`<< /Length ${stream.length} >>\nstream\n${stream}\nendstream`);
+  });
+  objects[1] = "<< /Type /Catalog /Pages 2 0 R >>";
+  objects[2] = `<< /Type /Pages /Kids [${pageIds.map(id => `${id} 0 R`).join(" ")}] /Count ${pageIds.length} >>`;
+
+  let pdf = "%PDF-1.4\n";
+  const offsets = [0];
+  for (let id = 1; id < objects.length; id += 1) {
+    offsets[id] = pdf.length;
+    pdf += `${id} 0 obj\n${objects[id]}\nendobj\n`;
+  }
+  const xrefOffset = pdf.length;
+  pdf += `xref\n0 ${objects.length}\n0000000000 65535 f \n`;
+  for (let id = 1; id < objects.length; id += 1) pdf += `${String(offsets[id]).padStart(10, "0")} 00000 n \n`;
+  pdf += `trailer\n<< /Size ${objects.length} /Root 1 0 R >>\nstartxref\n${xrefOffset}\n%%EOF`;
+  return pdf;
+}
+
+function pdfText(value) {
+  return String(value).replaceAll("\\", "\\\\").replaceAll("(", "\\(").replaceAll(")", "\\)");
 }
 
 function reportHtmlDocument(mode) {
@@ -1839,14 +1885,13 @@ function triggerBlobDownload(blob, fileName) {
   link.download = fileName;
   link.style.display = "none";
   document.body.appendChild(link);
-  link.dispatchEvent(new MouseEvent("click", { bubbles: true, cancelable: true, view: window }));
+  link.click();
   link.remove();
   window.setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
 
 function resetRunMetrics() {
   const selectedReady = state.reviewRows.filter(row => state.selectedFolders.has(row.path) && row.canDiscard).length;
-  const protectedCount = state.reviewRows.filter(row => row.status === "protected").length;
   state.metrics = {
     total: selectedReady,
     completed: 0,
@@ -1858,7 +1903,6 @@ function resetRunMetrics() {
   els.elapsedTime.textContent = "00:00";
   els.etaTime.textContent = "--:--";
   els.filesPerSecond.textContent = "0.0";
-  els.heicSpeed.textContent = protectedCount;
   setProgress(0);
 }
 
@@ -1875,7 +1919,6 @@ function updateMetrics(done = false) {
   els.elapsedTime.textContent = formatDuration(elapsedSeconds);
   els.etaTime.textContent = done ? "00:00" : (completed ? formatDuration(etaSeconds) : "--:--");
   els.filesPerSecond.textContent = perSecond.toFixed(1);
-  els.heicSpeed.textContent = state.reviewRows.filter(row => row.status === "protected").length;
   setProgress(state.metrics.total ? (completed / state.metrics.total) * 100 : 0);
 }
 
@@ -1895,9 +1938,8 @@ function updateControls() {
   els.downloadPdfButton.disabled = !state.reportBlob;
   els.selectVisibleButton.disabled = !state.filteredRows.length || state.processing;
   els.clearVisibleButton.disabled = !state.filteredRows.length || state.processing;
-  els.copySelectedPathsButton.disabled = !selectedReady || state.processing;
-  els.clearReviewBinButton.disabled = !selectedReady || state.processing;
   els.chooseFolderButton.disabled = state.processing;
+  els.browseBackendFolderButton.disabled = state.processing || !state.backendAvailable;
   els.checkBackendButton.disabled = state.processing || !els.serverPathInput.value.trim();
   els.scanBackendButton.disabled = state.processing || !isCurrentBackendPathReady();
   els.cancelBackendButton.disabled = !state.processing;
@@ -1908,14 +1950,12 @@ function updateControls() {
     els.discardButton.textContent = "Discard Selected";
     els.downloadButton.textContent = "Download CSV Report";
     renderReviewSummary();
-    renderReviewBin();
     return;
   }
 
   els.renameButton.textContent = "Apply Scan Rules";
   els.discardButton.textContent = selectedReady ? `Discard Selected (${selectedReady})` : "Discard Selected";
   els.downloadButton.textContent = "Download CSV Report";
-  renderReviewBin();
 
   if (!state.hasWriteAccess && hasRows) {
     els.zipInfo.textContent = "Scan-only source: download the audit report for server cleanup.";
@@ -1929,10 +1969,9 @@ function updateFolderSummary() {
   }
 
   const activeParentCount = [...state.parentFolders.values()]
-    .filter(parent => parent.emptyCount || parent.protectedCount)
+    .filter(parent => parent.emptyCount)
     .length;
   const readyCount = state.allReviewRows.filter(row => row.status === "ready").length;
-  const protectedCount = state.allReviewRows.filter(row => row.status === "protected").length;
   const discardedText = state.discardedRows.length ? `, ${state.discardedRows.length} discarded` : "";
 
   if (!state.allReviewRows.length) {
@@ -1940,7 +1979,7 @@ function updateFolderSummary() {
     return;
   }
 
-  els.folderSummary.textContent = `${state.mainFolderName}: ${activeParentCount} parent folders, ${state.scannedFolders} folders scanned, ${readyCount} ready, ${protectedCount} protected${discardedText}.`;
+  els.folderSummary.textContent = `${state.mainFolderName}: ${activeParentCount} parent folders, ${state.scannedFolders} folders scanned, ${readyCount} ready${discardedText}.`;
 }
 
 function emptyReviewMessage(context = "table") {
@@ -1951,7 +1990,7 @@ function emptyReviewMessage(context = "table") {
   }
 
   if (state.sourceKind === "backend") {
-    return `Full Local Mode finished with ${scannedText}, but no empty folders matched the current rules. Try Any age, include unknown dates, or review protected rules if you expected results.`;
+    return `Full Local Mode finished with ${scannedText}, but no empty folders matched the current rules. Try Any age or include unknown dates if you expected results.`;
   }
 
   if (state.sourceKind === "file" || state.sourceKind === "drop") {
@@ -2281,7 +2320,6 @@ function updateLocalModeStats(stats) {
     `${stats.foldersScanned || 0} folders scanned`,
     `${stats.emptyFolderRows || 0} empty-folder rows`,
     `${stats.emptyFoldersFound || 0} ready`,
-    `${stats.protectedFolders || 0} protected`,
     `${elapsed} elapsed`
   ].join(" | ");
 }
@@ -2318,8 +2356,6 @@ function clearWorkingState() {
   state.filteredRows = [];
   state.selectedFolders = new Set();
   state.selectedPreviewPath = "";
-  state.hygieneRows = [];
-  state.filteredHygieneRows = [];
   state.processedRows = new Set();
   state.discardedRows = [];
   state.failures = [];
@@ -2340,17 +2376,8 @@ function resetUi() {
   els.previewDetail.textContent = "Select a review row to preview folder details before cleanup.";
   els.previewCount.textContent = "0 folders";
   els.zipInfo.textContent = "Audit report will be available after scanning.";
-  els.reviewSummaryStrip.innerHTML = "<span><strong>0</strong> Ready</span><span><strong>0</strong> Selected</span><span><strong>0</strong> Protected</span><span><strong>0</strong> Failed</span><span><strong>0</strong> Backup planned</span>";
+  els.reviewSummaryStrip.innerHTML = "<span><strong>0</strong> Ready</span><span><strong>0</strong> Selected</span><span><strong>0</strong> Failed</span><span><strong>0</strong> Backup planned</span>";
   els.selectedActionCount.textContent = "0 selected";
-  els.reviewBinCount.textContent = "0";
-  els.reviewBinSummary.textContent = "Selected ready folders appear here before cleanup.";
-  els.reviewBinList.innerHTML = "";
-  els.hygieneCount.textContent = "0 flags";
-  els.hygieneSummary.textContent = "Load a folder to generate a general hygiene scan. This tab does not delete or discard anything.";
-  els.hygieneSummaryStrip.innerHTML = "<span><strong>0</strong> Attention</span><span><strong>0</strong> Review</span><span><strong>0</strong> Protected</span><span><strong>0</strong> Info</span>";
-  els.hygieneBody.innerHTML = hygienePlaceholderRows();
-  els.hygieneSearchInput.value = "";
-  els.hygieneStatusFilter.value = "all";
   els.searchInput.value = "";
   els.statusFilter.value = "all";
   els.approvalCheck.checked = false;
@@ -2368,7 +2395,6 @@ function resetUi() {
   els.elapsedTime.textContent = "00:00";
   els.etaTime.textContent = "--:--";
   els.filesPerSecond.textContent = "0.0";
-  els.heicSpeed.textContent = "0";
   updateControls();
 }
 
@@ -2424,7 +2450,7 @@ function folderPathCell(row) {
     openButton.className = "path-action";
     openButton.type = "button";
     openButton.textContent = "Open";
-    openButton.title = "Try to open this folder in a new tab. Some browsers block local server folder links, so the path is copied too.";
+    openButton.title = "Open this folder in Windows File Explorer.";
     openButton.addEventListener("click", () => openPathForRow(row));
     actions.appendChild(openButton);
   }
@@ -2457,12 +2483,19 @@ async function copyPathForRow(row, button) {
 
 async function openPathForRow(row) {
   const targetPath = absolutePathForRow(row);
-  await copyTextToClipboard(targetPath);
-  const opened = window.open(fileUrlForPath(targetPath), "_blank", "noopener");
-  addLog(opened
-    ? `Opening folder path. If the browser blocks it, paste the copied path into File Explorer: ${targetPath}`
-    : `Browser blocked direct folder opening. The path was copied so you can paste it into File Explorer: ${targetPath}`,
-    opened ? "info" : "warn");
+  try {
+    await backendRequest("/api/open-folder", {
+      method: "POST",
+      body: {
+        rootPath: state.backendRootPath,
+        relativePath: row.relativePath
+      }
+    });
+    addLog(`Opened folder in File Explorer: ${targetPath}`, "success");
+  } catch (error) {
+    await copyTextToClipboard(targetPath);
+    addLog(`Folder could not be opened: ${error.message}. The path was copied instead.`, "warn");
+  }
 }
 
 function absolutePathForRow(row) {
@@ -2539,15 +2572,11 @@ function ageStatus(lastModified, minAgeDays, includeUnknownDates) {
 }
 
 function protectedPatterns() {
-  return Array.from(els.protectedRules.querySelectorAll('input[type="checkbox"]:checked'))
-    .map(input => input.value.trim())
-    .filter(Boolean);
+  return [];
 }
 
 function protectedReasonForPath(path, patterns) {
-  const lowerPath = path.toLowerCase();
-  const match = patterns.find(rule => lowerPath.includes(rule.toLowerCase()));
-  return match ? `Protected rule: ${match}` : "";
+  return "";
 }
 
 function isSystemFileName(fileName) {

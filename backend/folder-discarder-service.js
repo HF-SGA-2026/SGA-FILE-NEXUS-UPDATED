@@ -3,26 +3,37 @@
 const fs = require("fs");
 const fsp = require("fs/promises");
 const path = require("path");
+const { execFile, spawn } = require("child_process");
+const { randomUUID } = require("crypto");
 
 const QUARANTINE_FOLDER = "SGA_FILE_NEXUS_QUARANTINE";
 const SYSTEM_FILES = new Set([".ds_store", "thumbs.db", "desktop.ini"]);
-
 function createFolderDiscarderService() {
   let activeJob = null;
-  const routes = new Set(["/api/health", "/api/check-path", "/api/scan", "/api/discard", "/api/restore", "/api/cancel"]);
+  const selectedRoots = new Set();
+  const reports = new Map();
+  const routes = new Set(["/api/health", "/api/select-folder", "/api/check-path", "/api/open-folder", "/api/report", "/api/scan", "/api/discard", "/api/restore", "/api/cancel"]);
 
   function handle(req, res) {
     const requestUrl = new URL(req.url || "/", `http://${req.headers.host || "127.0.0.1"}`);
-    if (!routes.has(requestUrl.pathname)) return false;
+    if (!routes.has(requestUrl.pathname) && !requestUrl.pathname.startsWith("/api/report/")) return false;
     run(req, res, requestUrl.pathname).catch(error => sendJson(res, error.statusCode || 500, { error: error.message }));
     return true;
   }
 
   async function run(req, res, pathname) {
+    if (req.method === "GET" && pathname.startsWith("/api/report/")) {
+      const id = pathname.slice("/api/report/".length);
+      const report = reports.get(id);
+      if (!report) throw httpError(404, "Report download expired or was not found.");
+      reports.delete(id);
+      sendDownload(res, report);
+      return;
+    }
     authorize(req);
     if (pathname === "/api/health" && req.method === "GET") {
-      const roots = allowedRoots();
-      sendJson(res, 200, { ok: true, cleanupEnabled: roots.length > 0, allowedRootCount: roots.length, quarantineFolder: QUARANTINE_FOLDER });
+      const roots = allowedRoots(selectedRoots);
+      sendJson(res, 200, { ok: true, cleanupEnabled: process.platform === "win32" || roots.length > 0, allowedRootCount: roots.length, quarantineFolder: QUARANTINE_FOLDER });
       return;
     }
     if (pathname === "/api/cancel" && req.method === "POST") {
@@ -32,13 +43,42 @@ function createFolderDiscarderService() {
     }
     if (req.method !== "POST") throw httpError(405, "Method not allowed.");
     const body = await readJson(req);
-    if (pathname === "/api/check-path") {
-      const root = await validateRoot(body.rootPath);
+    if (pathname === "/api/report") {
+      const content = String(body.content || "");
+      if (!content || Buffer.byteLength(content, "utf8") > 5 * 1024 * 1024) throw httpError(400, "Report content is missing or too large.");
+      const id = randomUUID();
+      const report = {
+        buffer: Buffer.from(content, "utf8"),
+        contentType: body.contentType === "application/pdf" ? "application/pdf" : "application/vnd.ms-excel; charset=utf-8",
+        fileName: safeDownloadName(body.fileName)
+      };
+      reports.set(id, report);
+      setTimeout(() => reports.delete(id), 5 * 60 * 1000).unref();
+      sendJson(res, 200, { ok: true, downloadUrl: `/api/report/${id}` });
+      return;
+    }
+    if (pathname === "/api/select-folder") {
+      const selectedPath = await selectFolder();
+      const root = selectedPath ? await approveRoot(selectedPath, selectedRoots) : "";
       sendJson(res, 200, { ok: true, rootPath: root });
       return;
     }
+    if (pathname === "/api/check-path") {
+      const root = await approveRoot(body.rootPath, selectedRoots);
+      sendJson(res, 200, { ok: true, rootPath: root });
+      return;
+    }
+    if (pathname === "/api/open-folder") {
+      const root = await validateRoot(body.rootPath, selectedRoots);
+      const folderPath = resolveInside(root, body.relativePath);
+      const stats = await fsp.stat(folderPath).catch(() => null);
+      if (!stats?.isDirectory()) throw httpError(404, "Folder was not found or is no longer available.");
+      await openFolderInExplorer(folderPath);
+      sendJson(res, 200, { ok: true, folderPath });
+      return;
+    }
     if (pathname === "/api/scan") {
-      const root = await validateRoot(body.rootPath);
+      const root = await validateRoot(body.rootPath, selectedRoots);
       if (activeJob) throw httpError(409, "Another folder scan is already running.");
       const job = { cancelled: false };
       activeJob = job;
@@ -50,11 +90,11 @@ function createFolderDiscarderService() {
       return;
     }
     if (pathname === "/api/discard") {
-      sendJson(res, 200, { ok: true, ...(await quarantineFolders(body)) });
+      sendJson(res, 200, { ok: true, ...(await quarantineFolders(body, selectedRoots)) });
       return;
     }
     if (pathname === "/api/restore") {
-      sendJson(res, 200, { ok: true, ...(await restoreLatest(body.rootPath)) });
+      sendJson(res, 200, { ok: true, ...(await restoreLatest(body.rootPath, selectedRoots)) });
       return;
     }
     throw httpError(404, "Not found.");
@@ -63,19 +103,85 @@ function createFolderDiscarderService() {
   return Object.freeze({ handle });
 }
 
-function allowedRoots() {
-  return String(process.env.SGA_NEXUS_ALLOWED_ROOTS || "").split(";").map(value => value.trim()).filter(Boolean).map(value => path.resolve(value));
+function safeDownloadName(value) {
+  const name = path.basename(String(value || "report"));
+  return name.replace(/[^a-z0-9._-]+/gi, "_") || "report";
 }
 
-async function validateRoot(input) {
+function sendDownload(res, report) {
+  res.writeHead(200, {
+    "Content-Type": report.contentType,
+    "Content-Length": report.buffer.length,
+    "Content-Disposition": `attachment; filename="${report.fileName}"`,
+    "Cache-Control": "no-store"
+  });
+  res.end(report.buffer);
+}
+
+function allowedRoots(selectedRoots = []) {
+  return [
+    ...String(process.env.SGA_NEXUS_ALLOWED_ROOTS || "").split(";").map(value => value.trim()).filter(Boolean).map(value => path.resolve(value)),
+    ...selectedRoots
+  ];
+}
+
+async function validateRoot(input, selectedRoots = []) {
   if (!input) throw httpError(400, "Server folder path is required.");
   const resolved = path.resolve(String(input));
-  const roots = allowedRoots();
-  if (!roots.length) throw httpError(503, "No approved roots are configured. Set SGA_NEXUS_ALLOWED_ROOTS before using Full Local Mode.");
+  const roots = allowedRoots(selectedRoots);
+  if (!roots.length) throw httpError(503, "Choose a folder first, or configure SGA_NEXUS_ALLOWED_ROOTS before using Full Local Mode.");
   if (!roots.some(root => isInside(root, resolved))) throw httpError(403, "That folder is outside the approved server roots.");
   const stats = await fsp.stat(resolved).catch(() => null);
   if (!stats?.isDirectory()) throw httpError(404, "Server folder was not found or is not a directory.");
   return resolved;
+}
+
+async function approveRoot(input, selectedRoots) {
+  if (!input) throw httpError(400, "Server folder path is required.");
+  const resolved = path.resolve(String(input));
+  const stats = await fsp.stat(resolved).catch(() => null);
+  if (!stats?.isDirectory()) throw httpError(404, "Server folder was not found or is not a directory.");
+  selectedRoots.add(resolved);
+  return resolved;
+}
+
+function selectFolder() {
+  if (process.platform !== "win32") throw httpError(501, "The local folder picker is currently available on Windows only.");
+  const script = [
+    "Add-Type -AssemblyName System.Windows.Forms",
+    "[System.Windows.Forms.Application]::EnableVisualStyles()",
+    "$dialog = New-Object System.Windows.Forms.FolderBrowserDialog",
+    "$dialog.Description = 'Choose a folder for Empty Folder Discarder'",
+    "$dialog.ShowNewFolderButton = $false",
+    "$dialog.SelectedPath = [Environment]::GetFolderPath('Desktop')",
+    "$result = $dialog.ShowDialog()",
+    "if ($result -eq [System.Windows.Forms.DialogResult]::OK) { [Console]::Out.Write($dialog.SelectedPath) }"
+  ].join("; ");
+  return new Promise((resolve, reject) => {
+    execFile("powershell.exe", ["-NoProfile", "-STA", "-Command", script], { windowsHide: false, maxBuffer: 1024 * 1024 }, (error, stdout) => {
+      if (error) {
+        reject(httpError(500, `Folder picker failed: ${error.message}`));
+        return;
+      }
+      resolve(String(stdout || "").trim());
+    });
+  });
+}
+
+function openFolderInExplorer(folderPath) {
+  if (process.platform !== "win32") throw httpError(501, "Opening folders is currently available on Windows only.");
+  return new Promise((resolve, reject) => {
+    const child = spawn("explorer.exe", [folderPath], {
+      detached: true,
+      stdio: "ignore",
+      windowsHide: false
+    });
+    child.once("error", error => reject(httpError(500, `Could not open File Explorer: ${error.message}`)));
+    child.once("spawn", () => {
+      child.unref();
+      resolve();
+    });
+  });
 }
 
 async function scanRoot(root, settings, job) {
@@ -123,10 +229,6 @@ async function scanRoot(root, settings, job) {
     memo.set(relativePath, result);
     return result;
   };
-  const protectedWords = (Array.isArray(settings.protectedRules)
-    ? settings.protectedRules
-    : String(settings.protectedRules || "").split(/\r?\n|,/)
-  ).map(value => String(value).trim().toLowerCase()).filter(Boolean);
   const strict = (settings.emptyDefinition || settings.emptyMode) === "strict";
   const ageDays = Number(settings.ageFilter || 0);
   const cutoff = ageDays > 0 ? Date.now() - (ageDays * 24 * 60 * 60 * 1000) : 0;
@@ -137,15 +239,14 @@ async function scanRoot(root, settings, job) {
     if (!(strict ? stats.files === 0 : stats.usable === 0)) continue;
     if (cutoff && record.lastModified > cutoff) continue;
     const displayPath = path.join(root, relativePath);
-    const protectedWord = protectedWords.find(word => displayPath.toLowerCase().includes(word));
     const parent = relativePath.split(/[\\/]/)[0];
     rows.push({
       path: displayPath,
       relativePath,
       parent,
       lastModified: record.lastModified,
-      status: protectedWord ? "protected" : "ready",
-      reason: protectedWord ? `Protected by “${protectedWord}”` : (record.children.length ? "Empty folder chain" : (stats.files ? "Only ignored system files" : "Completely empty"))
+      status: "ready",
+      reason: record.children.length ? "Empty folder chain" : (stats.files ? "Only ignored system files" : "Completely empty")
     });
   }
   rows.sort((a, b) => a.path.localeCompare(b.path));
@@ -156,11 +257,9 @@ async function scanRoot(root, settings, job) {
     return {
       name,
       folderCount,
-      emptyCount: parentRows.length,
-      protectedCount: parentRows.filter(row => row.status === "protected").length
+      emptyCount: parentRows.length
     };
   });
-  const protectedFolders = rows.filter(row => row.status === "protected").length;
   return {
     rootPath: root,
     sourceLabel: "Full Local Mode",
@@ -172,17 +271,16 @@ async function scanRoot(root, settings, job) {
     stats: {
       foldersScanned: scannedFolders,
       emptyFolderRows: rows.length,
-      emptyFoldersFound: rows.length - protectedFolders,
-      protectedFolders,
+      emptyFoldersFound: rows.length,
       elapsedMs: Date.now() - startedAt
     }
   };
 }
 
-async function quarantineFolders(body) {
+async function quarantineFolders(body, selectedRoots = []) {
   if (!body.approval) throw httpError(400, "Review approval is required.");
   if (body.quarantine === false) throw httpError(400, "Permanent deletion is disabled. Quarantine is required.");
-  const root = await validateRoot(body.rootPath);
+  const root = await validateRoot(body.rootPath, selectedRoots);
   const selected = compressRelativePaths(body.relativePaths || []);
   if (!selected.length) throw httpError(400, "No folders were selected.");
   const stamp = new Date().toISOString().replace(/[:.]/g, "-");
@@ -210,8 +308,8 @@ async function quarantineFolders(body) {
   return { processed, failures, quarantinePath: runPath, message: `${processed.length} folder(s) moved to quarantine; ${failures.length} failed.` };
 }
 
-async function restoreLatest(input) {
-  const root = await validateRoot(input);
+async function restoreLatest(input, selectedRoots = []) {
+  const root = await validateRoot(input, selectedRoots);
   const quarantineRoot = path.join(root, QUARANTINE_FOLDER);
   const runs = (await fsp.readdir(quarantineRoot, { withFileTypes: true }).catch(() => [])).filter(entry => entry.isDirectory()).map(entry => entry.name).sort().reverse();
   if (!runs.length) throw httpError(404, "No quarantine run was found for this server path.");
