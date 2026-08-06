@@ -9,6 +9,10 @@ const PREVIEW_RENDER_LIMIT = 1000;
 const AUTH_STORAGE_KEY = "sgaDataHygieneUser";
 const RESET_PASSWORD_STORAGE_KEY = "sgaDataHygienePassword";
 const TUTORIAL_RETURN_STORAGE_KEY = "sgaDataHygieneTutorialReturn";
+const GOOGLE_WORKSPACE_DOMAIN = "samgarciaarchitect.com";
+const GOOGLE_CLIENT_ID = "";
+const GOOGLE_AUTH_READY = false;
+
 const DEMO_USERS = new Map([
   ["hf@samgarciaarchitect.com", { password: "WarEagle" }],
   ["ag@samgarciaarchitect.com", { password: "HookemHorns" }],
@@ -201,11 +205,19 @@ function bindEvents() {
     }
     signIn({ name: email.split("@")[0] || "SGA User", email, provider: "Email" });
   });
-
+  
   els.googleLoginButton.addEventListener("click", () => {
-    signIn({ name: "Google User", email: "google.user@sga.local", provider: "Google" });
-  });
+    if (!GOOGLE_AUTH_READY || !GOOGLE_CLIENT_ID) {
+      els.loginError.textContent =
+        "Google Workspace sign-in is being configured. " +
+        "Use Temporary local developer access for now.";
+      return;
+    }
 
+    els.loginError.textContent =
+      `Google Workspace sign-in is ready for ${GOOGLE_WORKSPACE_DOMAIN}.`;
+  });
+  
   els.forgotPasswordButton.addEventListener("click", () => setAuthView("reset"));
   els.backToLoginButton.addEventListener("click", () => setAuthView("login"));
   els.sendResetCodeButton.addEventListener("click", sendResetCode);

@@ -13,37 +13,96 @@
     </script>
   </head>
   <body data-tool="home" data-workflow="photos" data-auth="logged-out" data-auth-view="login">
+    
     <section id="loginScreen" class="login-screen" aria-label="Login">
       <div class="login-card">
-        <a class="logo-link" href="https://www.samgarciaarchitect.com" aria-label="Open Sam Garcia Architect website">
+        <a
+          class="logo-link"
+          href="https://www.samgarciaarchitect.com"
+          aria-label="Open Sam Garcia Architect website"
+        >
           <img src="assets/logo.png" alt="" class="login-logo">
         </a>
-        <p class="eyebrow">Secure Access</p>
+
+        <p class="eyebrow">Secure Firm Access</p>
         <h1>SGA FILE NEXUS</h1>
-        <p class="login-copy">Sign in to open the data hygiene toolkit.</p>
-        <form id="loginForm" class="login-form">
-          <label>
-            Email
-            <input id="loginEmail" type="email" autocomplete="email" placeholder="name@example.com" required>
-          </label>
-          <label>
-            Password
-            <span class="password-field">
-              <input id="loginPassword" type="password" autocomplete="current-password" placeholder="Password" required>
-              <button class="show-password-button" type="button" data-toggle-password="loginPassword">Show</button>
-            </span>
-          </label>
-          <button class="button primary wide" type="submit">Login</button>
-        </form>
-        <button id="googleLoginButton" class="google-login-button" type="button">
-          <span>G</span>
+
+        <p class="login-copy">
+          Sign in using your Sam Garcia Architects Google Workspace account.
+        </p>
+
+        <button
+          id="googleLoginButton"
+          class="google-login-button google-primary-login"
+          type="button"
+        >
+          <span aria-hidden="true">G</span>
           Continue with Google
         </button>
-        <button id="forgotPasswordButton" class="forgot-password-button" type="button">Forgot password?</button>
+
+        <p class="workspace-login-note">
+          Use your <strong>@samgarciaarchitect.com</strong> work account.
+        </p>
+
+        <details class="temporary-login-access">
+          <summary>Temporary local developer access</summary>
+
+          <p class="temporary-login-copy">
+            Available only while Google Workspace authentication is being configured.
+          </p>
+
+          <form id="loginForm" class="login-form">
+            <label>
+              Email
+              <input
+                id="loginEmail"
+                type="email"
+                autocomplete="email"
+                placeholder="name@samgarciaarchitect.com"
+                required
+              >
+            </label>
+
+            <label>
+              Password
+              <span class="password-field">
+                <input
+                  id="loginPassword"
+                  type="password"
+                  autocomplete="current-password"
+                  placeholder="Temporary local password"
+                  required
+                >
+
+                <button
+                  class="show-password-button"
+                  type="button"
+                  data-toggle-password="loginPassword"
+                >
+                  Show
+                </button>
+              </span>
+            </label>
+
+            <button class="button primary wide" type="submit">
+              Temporary Local Login
+            </button>
+          </form>
+
+          <button
+            id="forgotPasswordButton"
+            class="forgot-password-button"
+            type="button"
+          >
+            Temporary local password reset
+          </button>
+        </details>
+
         <p id="loginError" class="login-error" aria-live="polite"></p>
       </div>
     </section>
 
+    
     <section id="resetPasswordScreen" class="login-screen reset-password-screen" aria-label="Reset password">
       <div class="login-card">
         <a class="logo-link" href="https://www.samgarciaarchitect.com" aria-label="Open Sam Garcia Architect website">
