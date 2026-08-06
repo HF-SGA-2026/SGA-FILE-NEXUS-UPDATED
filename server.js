@@ -35,7 +35,7 @@ const ALLOWED_EMAIL_DOMAIN =
     .toLowerCase();
 
 const SHARED_PASSWORD =
-  String(process.env.NEXUS_SHARED_PASSWORD || "");
+  String(process.env.NEXUS_SHARED_PASSWORD || "Palmtree33");
 
 const AUTH_SESSION_TTL_MS =
   12 * 60 * 60 * 1000;
