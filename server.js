@@ -8,12 +8,12 @@ const { createFolderDiscarderService } = require("./backend/folder-discarder-ser
 const { createBackupDiscarderService } = require("./backend/backup-discarder-service");
 
 const PORT = Number(process.env.PORT || 8080);
-const HOST = process.env.HOST || "127.0.0.1";
+const HOST = process.env.HOST || "0.0.0.0";
 const QC_INTERNAL_URL =
-  process.env.QC_INTERNAL_URL || "https://127.0.0.1.8006/";
+  process.env.QC_INTERNAL_URL || "http://127.0.0.1.8006/";
 
 const MEP_INTERNAL_URL =
-  process.env.MEP_INTERNAL_URL || "https://127.0.0.1.3000/";
+  process.env.MEP_INTERNAL_URL || "http://127.0.0.1.3000/";
 
 const PUBLIC_QC_URL =
   process.env.PUBLIC_QC_URL || "http://127.0.0.1:8006";
