@@ -10,16 +10,16 @@ const { createBackupDiscarderService } = require("./backend/backup-discarder-ser
 const PORT = Number(process.env.PORT || 8080);
 const HOST = process.env.HOST || "0.0.0.0";
 const QC_INTERNAL_URL =
-  process.env.QC_INTERNAL_URL || "http://127.0.0.1.8006/";
+  process.env.QC_INTERNAL_URL || "http://127.0.0.1:8006/";
 
 const MEP_INTERNAL_URL =
-  process.env.MEP_INTERNAL_URL || "http://127.0.0.1.3000/";
+  process.env.MEP_INTERNAL_URL || "http://127.0.0.1:3000/";
 
 const PUBLIC_QC_URL =
-  process.env.PUBLIC_QC_URL || "http://127.0.0.1:8006";
+  process.env.PUBLIC_QC_URL || "/qc/";
 
 const PUBLIC_MEP_URL =
-  process.env.PUBLIC_MEP_URL || "http://127.0.0.1:3000";
+  process.env.PUBLIC_MEP_URL || "/mep/";
 
 const PUBLIC_COWORKER_TOOL_URL =
   process.env.PUBLIC_COWORKER_TOOL_URL || "";
@@ -65,6 +65,44 @@ function send(res, statusCode, headers, body = "") {
 
 function sendJson(res, statusCode, data) {
   send(res, statusCode, { "Content-Type": "application/json; charset=utf-8" }, JSON.stringify(data));
+}
+
+function proxyRequest(req, res, mountPath, internalUrl) {
+  let target;
+
+  try {
+    target = new URL(internalUrl);
+  } catch {
+    send(res, 503, { "Content-Type": "text/plain; charset=utf-8" }, "Internal service URL is invalid.");
+    return;
+  }
+
+  const incomingUrl = req.url || mountPath;
+  const upstreamPath = incomingUrl.slice(mountPath.length) || "/";
+  const headers = { ...req.headers, host: target.host };
+  delete headers["accept-encoding"];
+
+  const upstream = http.request({
+    protocol: target.protocol,
+    hostname: target.hostname,
+    port: target.port,
+    method: req.method,
+    path: upstreamPath.startsWith("/") ? upstreamPath : `/${upstreamPath}`,
+    headers
+  }, upstreamResponse => {
+    res.writeHead(upstreamResponse.statusCode || 502, upstreamResponse.headers);
+    upstreamResponse.pipe(res);
+  });
+
+  upstream.on("error", error => {
+    if (!res.headersSent) {
+      send(res, 502, { "Content-Type": "text/plain; charset=utf-8" }, `Internal service unavailable: ${error.message}`);
+    } else {
+      res.destroy(error);
+    }
+  });
+
+  req.pipe(upstream);
 }
 
 function resolvePublicPath(urlPath) {
@@ -289,6 +327,21 @@ authCleanupTimer.unref();
 
 const server = http.createServer((req, res) => {
   const requestPath = (req.url || "/").split("?")[0];
+
+  if (requestPath === "/qc" || requestPath === "/mep") {
+    send(res, 302, { Location: `${requestPath}/` });
+    return;
+  }
+
+  if (requestPath.startsWith("/qc/")) {
+    proxyRequest(req, res, "/qc", QC_INTERNAL_URL);
+    return;
+  }
+
+  if (requestPath.startsWith("/mep/")) {
+    proxyRequest(req, res, "/mep", MEP_INTERNAL_URL);
+    return;
+  }
 
 
   if (req.method === "GET" && requestPath === "/api/auth/session") {

@@ -1,5 +1,17 @@
 const { useEffect, useRef, useState } = React;
 
+const QC_MOUNT = window.location.pathname.startsWith("/qc/") ? "/qc" : "";
+const nativeFetch = window.fetch.bind(window);
+window.fetch = (input, options) => nativeFetch(
+  QC_MOUNT && typeof input === "string" && input.startsWith("/api/")
+    ? `${QC_MOUNT}${input}`
+    : input,
+  options
+);
+const qcPath = value => QC_MOUNT && typeof value === "string" && value.startsWith("/")
+  ? `${QC_MOUNT}${value}`
+  : value;
+
 const DEFAULT_SPELL_DICTIONARY = [
   "soffit", "gypsum", "millwork", "storefront", "egress", "parapet",
   "cladding", "firestopping", "waterproofing", "flashing", "substrate",
@@ -343,7 +355,7 @@ function App() {
     React.createElement("header", { className: "topbar" },
       React.createElement("div", { className: "brand-lockup" },
         React.createElement("div", { className: "brand-logo", "aria-label": "Sam Garcia Architect" },
-          React.createElement("img", { src: "/static/sga-mark.png", alt: "" })
+          React.createElement("img", { src: qcPath("/static/sga-mark.png"), alt: "" })
         ),
         React.createElement("div", null,
           React.createElement("div", { className: "eyebrow" }, "Sam Garcia Architect"),
@@ -653,7 +665,7 @@ function DictionaryViewport({
 function ProjectRow({ item, isCurrent, openHistoryRun, updateProjectMeta, archiveHistoryRun, deleteHistoryRun }) {
   const title = item.meta.project_name || projectNameFromFilename(item.filename);
   return React.createElement("article", { className: `project-row ${isCurrent ? "current" : ""}` },
-    React.createElement("img", { src: item.thumbnail_url, alt: `${title} thumbnail` }),
+    React.createElement("img", { src: qcPath(item.thumbnail_url), alt: `${title} thumbnail` }),
     React.createElement("div", { className: "project-fields" },
       React.createElement("div", { className: "project-state" }, isCurrent ? `Current · ${item.filename}` : item.filename),
       React.createElement("input", {
@@ -815,7 +827,7 @@ function SheetsTab({ run, updatePage }) {
           onClick: () => openExpandedPage(page),
           "aria-label": `Open page ${page.page_number} full screen`
         },
-          React.createElement("img", { src: page.thumbnail_url, alt: `Page ${page.page_number}` }),
+          React.createElement("img", { src: qcPath(page.thumbnail_url), alt: `Page ${page.page_number}` }),
           React.createElement("span", { className: "sheet-thumbnail-overlay" }, "View full screen")
         ),
         React.createElement("div", { className: "sheet-fields" },
@@ -873,7 +885,7 @@ function SheetsTab({ run, updatePage }) {
         },
           React.createElement("div", { className: "sheet-lightbox-content", style: { width: `${sheetZoom * 100}%` } },
             React.createElement("img", {
-              src: expandedPage.preview_url || expandedPage.thumbnail_url,
+              src: qcPath(expandedPage.preview_url || expandedPage.thumbnail_url),
               alt: `Page ${expandedPage.page_number} full screen`,
               draggable: false
             })

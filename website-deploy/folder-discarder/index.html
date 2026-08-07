@@ -44,16 +44,16 @@
         <div class="section-heading">
           <div>
             <p class="eyebrow">Full Local Mode</p>
-            <h2>Scan real local or server path</h2>
+            <h2>Scan an Acer or shared server path</h2>
           </div>
         </div>
-        <p class="mode-help">Choose a local folder, or paste a full Windows or network path. Check Path must pass before Scan Folder can run against the backend.</p>
+        <p class="mode-help">Paste a path the Acer host can access, such as an Acer-local folder or UNC share. Employee-PC C:\ paths are not available to Acer. Check Path must pass before Scan Folder can run.</p>
         <div class="local-mode-grid">
           <div class="backend-path-field">
-            <label class="field-label" for="serverPathInput" title="The exact local or server folder the backend should scan, such as a mapped drive or shared network path.">Full folder path</label>
-            <input id="serverPathInput" class="field-control" type="text" autocomplete="off" placeholder="Example: C:\Projects\Active or \\firm-server\share" title="Paste the full local or network folder path to scan.">
+            <label class="field-label" for="serverPathInput" title="The exact Acer-local or shared folder the backend should scan.">Acer/shared folder path</label>
+            <input id="serverPathInput" class="field-control" type="text" autocomplete="off" placeholder="Example: \\firm-server\share\Projects" title="Paste a path accessible from the Acer host.">
           </div>
-          <button id="browseBackendFolderButton" class="button secondary wide" type="button" title="Open the Windows folder picker and fill in the selected local folder path.">Choose Folder</button>
+          <button id="browseBackendFolderButton" class="button secondary wide" type="button" title="Open the Windows folder picker on the Acer host.">Choose on Acer Host</button>
           <button id="checkBackendButton" class="button secondary wide" type="button" title="Checks whether the backend can access this exact folder path.">Check Path</button>
           <button id="scanBackendButton" class="button primary wide" type="button" disabled title="Scans the checked folder path through the backend and loads empty folders into the review list.">Scan Folder</button>
         </div>

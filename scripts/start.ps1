@@ -396,6 +396,7 @@ try {
     -Name "MEP" `
     -FilePath "node" `
     -ArgumentList @("server.js") `
+    -EnvironmentVariables @{ "HOST" = "127.0.0.1"; "PORT" = "3000" } `
     -WorkingDirectory $mepDirectory
 
   Wait-ForServiceReady `

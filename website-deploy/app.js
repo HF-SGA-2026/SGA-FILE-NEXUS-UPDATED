@@ -19,7 +19,7 @@ const TOOL_PARENTS = new Map([
 const COMING_SOON_TOOLS = {
   "prompt-builder": {
     title: "SGA Prompt Builder",
-    copy: "SGA Prompt Builder is coming soon."
+    copy: "Create structured prompts for SGA workflows."
   },
 };
 
@@ -628,13 +628,13 @@ function initializeRuntimeServices() {
   if (els.qcIntegrityFrame) {
     els.qcIntegrityFrame.src =
       runtimeConfig.qcUrl ||
-      "http://127.0.0.1:8006";
+      "/qc/";
   }
 
   if (els.mepAnalysisFrame) {
     els.mepAnalysisFrame.src =
       runtimeConfig.mepUrl ||
-      "http://127.0.0.1:3000";
+      "/mep/";
   }
 }
 
@@ -839,8 +839,8 @@ async function scanServerFolder() {
 
   const serverStatus = await getServerStatus();
   if (!serverStatus?.serverExport) {
-    window.alert("Server folder scanning needs the Node server. Stop the current localhost server, then run npm start from the SGA-FILE-RENAME folder.");
-    addLog("Start the local server with npm start before scanning a server folder.", "error");
+    window.alert("Server folder scanning needs the Nexus Node server. Run npm start on the Acer host, then try again.");
+    addLog("Start Nexus with npm start on the Acer host before scanning a server folder.", "error");
     return;
   }
 

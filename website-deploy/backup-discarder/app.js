@@ -127,6 +127,7 @@ const els = {
   fileInput: document.getElementById("fileInput"),
   clearButton: document.getElementById("clearButton"),
   refreshScanButton: document.getElementById("refreshScanButton"),
+  serverRootPathInput: document.getElementById("serverRootPathInput"),
   serverStatusButton: document.getElementById("serverStatusButton"),
   selectAllButton: document.getElementById("selectAllButton"),
   deselectAllButton: document.getElementById("deselectAllButton"),
@@ -211,7 +212,7 @@ function initTooltips() {
   setTooltip(els.dropZone, "Drop a project folder or ZIP file. ZIP files are scanned in the browser without requiring extraction.");
   setTooltip(els.chooseFolderButton, "Choose a ZIP file to scan, or drag a project folder onto the drop area.");
   setTooltip(els.clearButton, "Clear the current folder, selections, Review Bin, and report.");
-  setTooltip(els.serverStatusButton, "Choose a broad trusted Local Server root. Each scanned Main Folder must be inside it.");
+  setTooltip(els.serverStatusButton, "Use a broad trusted path accessible to the Acer host. Each scanned Main Folder must be inside it.");
   setTooltip(els.selectAllButton, "Select all detected parent folders.");
   setTooltip(els.deselectAllButton, "Clear all selected parent folders.");
   setTooltip(els.selectFlaggedButton, "Select all deletable files in the current review filter.");
@@ -383,6 +384,11 @@ function bindEvents() {
   });
 
   els.serverStatusButton.addEventListener("click", configureBackendRoot);
+  els.serverRootPathInput.addEventListener("keydown", event => {
+    if (event.key !== "Enter") return;
+    event.preventDefault();
+    configureBackendRoot();
+  });
   els.selectAllButton.addEventListener("click", () => setAllParents(true));
   els.deselectAllButton.addEventListener("click", () => setAllParents(false));
   els.selectFlaggedButton.addEventListener("click", () => setAllFlagged(true));
@@ -2676,7 +2682,7 @@ function setStatus(message) {
 
 async function checkBackendStatus() {
   if (!isLocalHttpApp()) {
-    setBackendStatus(false, "Open http://localhost:3000 for real file moves.");
+    setBackendStatus(false, "Open this tool through the Nexus server for real file moves.");
     return;
   }
 
@@ -2686,6 +2692,9 @@ async function checkBackendStatus() {
     const data = await response.json();
     state.backend.rootConfigured = Boolean(data.serverRootPath || data.rootPath);
     state.backend.serverRootPath = data.serverRootPath || data.rootPath || "";
+    if (state.backend.serverRootPath && !els.serverRootPathInput.value.trim()) {
+      els.serverRootPathInput.value = state.backend.serverRootPath;
+    }
     setBackendStatus(true, state.backend.serverRootPath ? `Local server connected: ${state.backend.serverRootPath}` : "Click Choose Local Folder to configure a trusted server root.");
   } catch (error) {
     state.backend.rootConfigured = false;
@@ -2696,14 +2705,18 @@ async function checkBackendStatus() {
 }
 
 function isLocalHttpApp() {
-  return location.protocol === "http:" && /^(localhost|127\.0\.0\.1)$/i.test(location.hostname);
+  return /^https?:$/.test(location.protocol) && Boolean(location.host);
+}
+
+function isLoopbackHost() {
+  return ["localhost", "127.0.0.1", "::1"].includes(location.hostname.toLowerCase());
 }
 
 function setBackendStatus(connected, message) {
   state.backend.connected = connected;
   state.backend.message = message;
   els.serverStatusButton.textContent = connected
-    ? (state.backend.rootConfigured ? "Local server connected" : "Choose Local Folder for File Moves")
+    ? (state.backend.rootConfigured ? "Acer server folder connected" : (isLoopbackHost() ? "Choose Folder on Acer Host" : "Use Acer Folder Path"))
     : "Local server disconnected";
   els.serverStatusButton.classList.toggle("connected", connected);
   els.serverStatusButton.classList.toggle("disconnected", !connected);
@@ -2712,7 +2725,22 @@ function setBackendStatus(connected, message) {
 
 async function configureBackendRoot() {
   if (!isLocalHttpApp()) {
-    addLog("Local server not connected. Start the server and open http://localhost:3000 to move files safely.", "warn");
+    addLog("Nexus server not connected. Open this tool through the Nexus server to move files safely.", "warn");
+    return;
+  }
+
+  const manualPath = els.serverRootPathInput.value.trim();
+  if (manualPath && (!isLoopbackHost() || manualPath !== state.backend.serverRootPath)) {
+    await configureBackendRootFromPath(manualPath);
+    return;
+  }
+
+  if (!isLoopbackHost()) {
+    const message = "Enter or paste a folder path accessible to the Acer host.";
+    els.serverRootPathInput.focus();
+    els.serverRootPathInput.select();
+    setBackendStatus(true, message);
+    addLog(`${message} Prefer a UNC/shared path such as \\\\SERVER\\Projects.`, "warn");
     return;
   }
 
@@ -2721,22 +2749,42 @@ async function configureBackendRoot() {
     const data = await apiRequest("/choose-folder");
     state.backend.rootConfigured = true;
     state.backend.serverRootPath = data.serverRootPath || data.rootPath || "";
+    els.serverRootPathInput.value = state.backend.serverRootPath;
     clearMainFolderMatch();
     setBackendStatus(true, `Local server connected: ${state.backend.serverRootPath}`);
     addLog(`Local backend root set to ${state.backend.serverRootPath}.`);
     await resolveBackendMainFolder(true);
   } catch (error) {
     state.backend.rootConfigured = false;
-    setBackendStatus(true, "Click Choose Local Folder to configure a broad trusted server root.");
+    setBackendStatus(true, "Choose a broad trusted folder on the Acer host. UNC shared folders are supported.");
     addLog(`Folder picker was not completed: ${error.message}`, "warn");
+  }
+  updateControls();
+}
+
+async function configureBackendRootFromPath(serverRootPath) {
+  try {
+    setBackendStatus(true, "Checking the Acer-accessible folder path...");
+    const data = await apiRequest("/select-folder", { serverRootPath });
+    state.backend.rootConfigured = true;
+    state.backend.serverRootPath = data.serverRootPath || data.rootPath || serverRootPath;
+    els.serverRootPathInput.value = state.backend.serverRootPath;
+    clearMainFolderMatch();
+    setBackendStatus(true, `Acer server folder connected: ${state.backend.serverRootPath}`);
+    addLog(`Acer-accessible server root set to ${state.backend.serverRootPath}.`);
+    await resolveBackendMainFolder(true);
+  } catch (error) {
+    state.backend.rootConfigured = false;
+    setBackendStatus(true, "Enter a folder path accessible to the Acer host. UNC/shared paths are supported.");
+    addLog(`Server folder path could not be connected: ${error.message}`, "warn");
   }
   updateControls();
 }
 
 function maybeSuggestLocalFolderPicker() {
   if (!isLocalHttpApp() || !state.backend.connected || state.backend.rootConfigured) return;
-  addLog("Click Choose Local Folder to configure a broad trusted server root before moving files.", "warn");
-  setBackendStatus(true, "Click Choose Local Folder to configure a broad trusted server root.");
+  addLog("Choose a broad trusted folder on the Acer host before moving files. Employee-PC C:\\ paths are not available to Acer.", "warn");
+  setBackendStatus(true, "Choose a broad trusted folder on the Acer host. UNC shared folders are supported.");
 }
 
 async function apiRequest(path, payload = {}) {

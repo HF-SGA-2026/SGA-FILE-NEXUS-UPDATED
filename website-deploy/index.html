@@ -12,7 +12,7 @@
       }
     </script>
   </head>
-  <body data-tool="home" data-workflow="photos" data-auth="logged-out" data-auth-view="login">
+  <body data-tool="home" data-workflow="photos" data-auth="loading" data-auth-view="login">
 
     <section id="loginScreen" class="login-screen" aria-label="Login">
       <div class="login-card">
@@ -299,10 +299,18 @@
       </section>
 
       <section id="comingSoonWorkspace" class="coming-soon-workspace">
-        <section class="panel hub-panel coming-soon-panel">
-          <p class="eyebrow">Coming Soon</p>
-          <h2 id="comingSoonTitle">Coming Soon</h2>
-          <div class="pdf-coming-soon">Coming soon!</div>
+        <section class="panel hub-panel coming-soon-panel prompt-builder-launch-panel">
+          <a
+            class="prompt-builder-launch-card"
+            href="https://hf-sga-2026.github.io/SGA-Prompt-Builder/"
+            target="_blank"
+            rel="noopener noreferrer"
+            aria-label="Open SGA Prompt Builder">
+            <span class="eyebrow">SGA Workflow Tool</span>
+            <span id="comingSoonTitle" class="prompt-builder-launch-title">SGA Prompt Builder</span>
+            <span class="prompt-builder-launch-copy">Create structured prompts for SGA workflows.</span>
+            <span class="prompt-builder-launch-action">Open Prompt Builder <span aria-hidden="true">&rarr;</span></span>
+          </a>
         </section>
       </section>
 
@@ -327,7 +335,7 @@
             <button id="chooseFolderButton" class="inline-folder-choice" type="button">Choose Main Folder</button>
             <input id="folderInput" class="folder-input" type="file" webkitdirectory directory multiple>
             <div class="server-folder-row">
-              <input id="serverFolderPathInput" type="text" placeholder="/Users/you/Desktop/Main Folder" aria-label="Server folder path">
+              <input id="serverFolderPathInput" type="text" placeholder="Acer-accessible path, e.g. \\SERVER\Projects\Main Folder" aria-label="Acer or shared server folder path">
               <button id="serverScanButton" class="button compact" type="button">Scan Server Folder</button>
             </div>
           </div>

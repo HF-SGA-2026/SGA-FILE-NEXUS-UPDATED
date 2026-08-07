@@ -132,12 +132,12 @@ function bindEvents() {
     event.stopPropagation();
     if (state.processing) return;
 
-    if (state.backendAvailable && !window.location.hostname.endsWith(".github.io")) {
+    if (state.backendAvailable && isLoopbackHost() && !window.location.hostname.endsWith(".github.io")) {
       await browseBackendFolder(true);
       return;
     }
 
-    if (window.showDirectoryPicker) {
+    if (window.showDirectoryPicker && window.isSecureContext) {
       setStatus("Opening browser folder picker...", "loading");
       addLog("Choose a folder to begin the browser scan.", "info");
       await chooseBrowserFolder();
@@ -227,8 +227,12 @@ function bindEvents() {
 function initBackendFields() {
   const configuredUrl = window.SGA_FILE_NEXUS_CONFIG?.backendUrl || "";
   const savedUrl = localStorage.getItem(BACKEND_URL_STORAGE_KEY) || "";
-  const sameOrigin = ["127.0.0.1", "localhost"].includes(window.location.hostname);
-  els.backendUrl.value = sameOrigin ? window.location.origin : (savedUrl || configuredUrl || "http://127.0.0.1:8787");
+  const hostedByNexus = !window.location.hostname.endsWith(".github.io") && /^https?:$/.test(window.location.protocol);
+  els.backendUrl.value = hostedByNexus ? window.location.origin : (savedUrl || configuredUrl);
+}
+
+function isLoopbackHost() {
+  return ["127.0.0.1", "localhost", "::1"].includes(window.location.hostname);
 }
 
 function updateLibraryStatus() {
